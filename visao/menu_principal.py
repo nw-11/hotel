@@ -10,26 +10,27 @@ class Menu_Principal:
         self.mr = Menu_Reserva()
 
     def menu(self):
-        print("\nAdministrador Hoteleiro - v0.0.1\n")
+        print("\nAdministrador Hoteleiro - v1.0\n")
         while True:
             print("MENU PRINCIPAL")
-            print("\n1 - Hóspede")
-            print("2 - Quarto")
-            print("3 - Reserva")
+            print("\n1 - Hóspedes")
+            print("2 - Quartos")
+            print("3 - Reservas")
             print("4 - Sair")
-            escolha = int(input("\nDigite sua escolha: "))
-            if escolha == 1:
+            try:
+                op = int(input("\nEscolha: "))
+            except ValueError:
+                print("Opção inválida.")
+                continue
+
+            if op == 1:
                 self.mh.menu()
-            elif escolha == 2:
+            elif op == 2:
                 self.mq.menu()
-            elif escolha == 3:
+            elif op == 3:
                 self.mr.menu()
-            elif escolha == 4:
+            elif op == 4:
                 print("\nFIM DO PROGRAMA")
                 break
             else:
-                print("Escolha um número válido!")
-
-#teste
-a = Menu_Principal()
-a.menu()
+                print("Opção inválida.")
