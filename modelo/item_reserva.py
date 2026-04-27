@@ -4,11 +4,6 @@ from modelo.banco_de_dados import Bancodedados
 
 
 class ItemReserva(Entidade):
-    """
-    Representa um item extra adicionado a uma reserva (ex: frigobar, serviço de quarto).
-    Sempre pertence a uma Reserva — não existe de forma independente.
-    """
-
     def __init__(self, nome, preco, id=None):
         super().__init__(id)
         self.nome = nome

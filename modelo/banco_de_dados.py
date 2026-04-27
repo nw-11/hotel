@@ -1,7 +1,7 @@
 import os
 
 
-# Pasta raiz do projeto (um nível acima de modelo/)
+#Pega a pasta raiz do projeto (um nível antes de modelo/)
 _DIR = os.path.dirname(os.path.dirname(__file__))
 
 _ARQ_HOSPEDES  = os.path.join(_DIR, "hospedes.txt")
@@ -14,18 +14,6 @@ SEP = ";"   # separador de campos
 
 
 class Bancodedados:
-    """
-    Camada de persistência usando arquivos de texto (.txt) separados por ';'.
-
-    Formato de cada arquivo:
-        hospedes.txt      →  id;nome;cpf;email;telefone
-        quartos.txt       →  id;numero;tipo;diaria;disponivel
-        reservas.txt      →  id;hospede_id;quarto_id;checkin;checkout
-        itens_reserva.txt →  id;reserva_id;nome;preco
-        ids.txt           →  proximo_id_hospede;proximo_id_quarto;proximo_id_reserva;proximo_id_item
-
-    Todos os métodos são @classmethod — nunca instancie essa classe.
-    """
 
     # ------------------------------------------------------------------
     # INICIALIZAÇÃO
@@ -33,7 +21,7 @@ class Bancodedados:
 
     @classmethod
     def inicializar(cls):
-        """Cria os arquivos de dados se ainda não existirem."""
+        #Cria os arquivos de dados se ainda não existirem.
         for caminho in (_ARQ_HOSPEDES, _ARQ_QUARTOS, _ARQ_RESERVAS, _ARQ_ITENS):
             if not os.path.exists(caminho):
                 open(caminho, "w", encoding="utf-8").close()
@@ -78,13 +66,14 @@ class Bancodedados:
 
     @classmethod
     def _ler_linhas(cls, caminho):
-        """Retorna lista de listas de campos. Ignora linhas vazias."""
+
+        #Retorna lista de listas de campos. Ignora linhas vazias.
         with open(caminho, "r", encoding="utf-8") as f:
             return [l.strip().split(SEP) for l in f if l.strip()]
 
     @classmethod
     def _escrever_linhas(cls, caminho, linhas):
-        """Recebe lista de listas de campos e escreve no arquivo."""
+        #Recebe lista de listas de campos e escreve no arquivo.
         with open(caminho, "w", encoding="utf-8") as f:
             for campos in linhas:
                 f.write(SEP.join(str(c) for c in campos) + "\n")

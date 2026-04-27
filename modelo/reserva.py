@@ -4,17 +4,6 @@ from modelo.item_reserva import ItemReserva
  
  
 class Reserva(Entidade):
-    """
-    Representa uma reserva de quarto feita por um hóspede.
- 
-    Composição:
-        - hospede  : Hospede  (quem reservou)
-        - quarto   : Quarto   (qual quarto)
-        - checkin  : str      (data no formato DD/MM/AAAA)
-        - checkout : str      (data no formato DD/MM/AAAA)
-        - itens    : list[ItemReserva]  (serviços e consumos extras)
-    """
- 
     def __init__(self, hospede, quarto, checkin, checkout, id=None):
         super().__init__(id)
         self.hospede = hospede
