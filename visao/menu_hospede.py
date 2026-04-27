@@ -1,122 +1,142 @@
 from ..modelo.banco_de_dados import Bancodedados
 from ..modelo.hospede import Hospede
 
-class Menu_Hospede():
+
+class Menu_Hospede:
     def __init__(self):
         pass
-        #não vai ter nada, pois usamos banco de dados
 
-#MÉTODOS HÓSPEDES------------------------------------------------------------------
-    def add_Hospede(self, hospede):
-        Bancodedados.salva_hospede(hospede)
-        
-    def create_Hospede(self):
-        tnome = input("Nome: ")
-        tcpf = input("CPF: ")
-        temail = input("Email: ")
-        ttelefone = input("Telefone: ")
-        tHospede = Hospede(tnome, tcpf, temail, ttelefone)
-        return tHospede        
+    # ------------------------------------------------------------------
+    # Métodos internos
+    # ------------------------------------------------------------------
 
-    
-    def visualize_Hospede(self, tid):
-        tHospede = Bancodedados.busca_hospede(tid)
-        if tHospede is not None:
-            print(tHospede)
-        else:
-            print("Hóspede não encontrado.")
+    def _criar_hospede(self):
+        nome     = input("Nome: ")
+        cpf      = input("CPF: ")
+        email    = input("E-mail: ")
+        telefone = input("Telefone: ")
+        return Hospede(nome, cpf, email, telefone)
 
-    def apaga_Hospede(self, hospede):
-        if hospede.apagar():
-            print("\nHóspede removido com êxito.")
-        else:
-            print("\nERRO: Hóspede inexistente.")
+    def _buscar_por_id(self):
+        try:
+            tid = int(input("ID do hóspede: "))
+            h = Bancodedados.busca_hospede(tid)
+            if h is None:
+                print("Hóspede não encontrado.")
+            return h
+        except ValueError:
+            print("ID inválido.")
+            return None
 
+    # ------------------------------------------------------------------
+    # Ações
+    # ------------------------------------------------------------------
 
-#MÉTODO EDIT-----------------------------------------------------------
+    def _adicionar(self):
+        h = self._criar_hospede()
+        h.salvar()
+        print(f"\nHóspede '{h.nome}' cadastrado com ID {h.id}.")
 
-    def edit_Hospede(self, hospede):
+    def _editar(self):
+        h = self._buscar_por_id()
+        if h is None:
+            return
         while True:
-            print("O que você quer alterar?")
+            print("\nO que deseja alterar?")
             print("1 - Nome")
             print("2 - CPF")
             print("3 - E-mail")
             print("4 - Telefone")
-            print("5 - Sair")
-
-            tescolhaH = int(input("Digite sua escolha: "))
-
-            if tescolhaH == 1:
-                hospede.nome = input("Novo nome: ")
-
-            elif tescolhaH == 2:
-                hospede.cpf = input("Novo CPF: ")
-
-            elif tescolhaH == 3:
-                hospede.email = input("Novo E-mail: ")
-
-            elif tescolhaH == 4:
-                hospede.telefone = input("Novo Telefone: ")
-
-            elif tescolhaH == 5:
+            print("5 - Concluir")
+            try:
+                op = int(input("Escolha: "))
+            except ValueError:
+                print("Opção inválida.")
+                continue
+            if op == 1:
+                h.nome = input("Novo nome: ")
+            elif op == 2:
+                h.cpf = input("Novo CPF: ")
+            elif op == 3:
+                h.email = input("Novo e-mail: ")
+            elif op == 4:
+                h.telefone = input("Novo telefone: ")
+            elif op == 5:
+                h.atualizar()
+                print("Hóspede atualizado com sucesso.")
                 break
-            
             else:
-                print("Digite um número válido!")
+                print("Opção inválida.")
 
-#MÉTODO MENU------------------------------------------------------------------
+    def _remover(self):
+        h = self._buscar_por_id()
+        if h is None:
+            return
+        confirma = input(f"Confirma remoção de '{h.nome}'? (s/n): ").lower()
+        if confirma == "s":
+            if h.apagar():
+                print("Hóspede removido com sucesso.")
+            else:
+                print("Erro ao remover hóspede.")
+
+    def _listar_todos(self):
+        hospedes = Bancodedados.lista_hospedes()
+        if not hospedes:
+            print("Nenhum hóspede cadastrado.")
+            return
+        for h in hospedes:
+            print()
+            print(h)
+            print("-" * 30)
+
+    def _buscar_por_nome(self):
+        nome = input("Nome (ou parte do nome): ")
+        hospedes = Bancodedados.busca_hospedes_por_nome(nome)
+        if not hospedes:
+            print("Nenhum hóspede encontrado.")
+            return
+        for h in hospedes:
+            print()
+            print(h)
+            print("-" * 30)
+
+    # ------------------------------------------------------------------
+    # Menu principal
+    # ------------------------------------------------------------------
 
     def menu(self):
         while True:
             print("\n MENU DE HÓSPEDES")
-            print("\n1 - Adicionar Hóspede")
-            print("2 - Editar Hóspede")
-            print("3 - Remover Hóspede")
-            print("4 - Visualizar a partir de ID")
-            print("5 - Visualizar todos os hóspedes")
-            print("6 - Sair")
+            print("1 - Cadastrar hóspede")
+            print("2 - Editar hóspede")
+            print("3 - Remover hóspede")
+            print("4 - Visualizar por ID")
+            print("5 - Listar todos os hóspedes")
+            print("6 - Buscar por nome")
+            print("7 - Voltar")
 
-            escolhaH = int(input("\nDigite um número: "))
+            try:
+                op = int(input("\nEscolha: "))
+            except ValueError:
+                print("Opção inválida.")
+                continue
 
-            if escolhaH == 1: #ADICIONAR
-                tHospede = self.create_Hospede()
-                tHospede.salvar()
-
-            elif escolhaH == 2: #EDITAR
-                tHospede = Bancodedados.busca_hospede(int(input("Digite o ID do hóspede: ")))
-                if tHospede is not None:
-                    self.edit_Hospede(tHospede)
-                else:
-                    print("Hóspede não encontrado.")
-
-            elif escolhaH == 3: #REMOVER
-                tid = int(input("\nDigite o ID do Hóspede: "))
-                tHospede = Bancodedados.busca_hospede(tid)
-                if tHospede is not None:
-                    self.apaga_Hospede(tHospede)
-                else:
-                    print("\nERRO: Hóspede inexistente.")
-                
-
-
-            elif escolhaH == 4: #VISUALIZAR A PARTIR DE ID
-                tid = int(input("\nDigite o ID do Hóspede: "))
-                print("\nINFORMAÇÕES DO HÓSPEDE: \n")
-                self.visualize_Hospede(tid)
-
-
-            elif escolhaH == 5: #VISUALIZAR TODOS
-                print("\nLISTA DE HÓSPEDES: \n")
-                qtd = 0
-                for hospede in Bancodedados.lista_hospedes():
-                    qtd += 1
-                    print(hospede)
-                    print()
-                if qtd == 0:
-                    print("Nenhum hóspede cadastrado\n")
-
-            elif escolhaH == 6: #SAIR
+            if op == 1:
+                self._adicionar()
+            elif op == 2:
+                self._editar()
+            elif op == 3:
+                self._remover()
+            elif op == 4:
+                h = self._buscar_por_id()
+                if h:
+                    print("\n" + str(h))
+            elif op == 5:
+                print("\nLISTA DE HÓSPEDES:\n")
+                self._listar_todos()
+            elif op == 6:
+                self._buscar_por_nome()
+            elif op == 7:
                 break
-
             else:
-                print("Escolha um número válido!")
+                print("Opção inválida.")
