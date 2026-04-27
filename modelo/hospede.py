@@ -1,5 +1,5 @@
-from .entidade import Entidade
-from .banco_de_dados import Bancodedados
+from modelo.entidade import Entidade
+from modelo.banco_de_dados import Bancodedados
 
 class Hospede(Entidade):
     def __init__(self, nome, cpf, email, telefone, id = None):

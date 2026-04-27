@@ -1,8 +1,8 @@
-#biblioteca para mexer nos arquivos do computador
 import os
 
-# Pasta onde ficam os arquivos de dados (mesma pasta deste módulo)
-_DIR = os.path.dirname(__file__)
+
+# Pasta raiz do projeto (um nível acima de modelo/)
+_DIR = os.path.dirname(os.path.dirname(__file__))
 
 _ARQ_HOSPEDES  = os.path.join(_DIR, "hospedes.txt")
 _ARQ_QUARTOS   = os.path.join(_DIR, "quartos.txt")
@@ -129,7 +129,7 @@ class Bancodedados:
 
     @classmethod
     def busca_hospede(cls, id):
-        from .hospede import Hospede
+        from modelo.hospede import Hospede
         for campos in cls._ler_linhas(_ARQ_HOSPEDES):
             if int(campos[0]) == id:
                 h = Hospede(campos[1], campos[2], campos[3], campos[4], id=int(campos[0]))
@@ -139,7 +139,7 @@ class Bancodedados:
 
     @classmethod
     def lista_hospedes(cls):
-        from .hospede import Hospede
+        from modelo.hospede import Hospede
         hospedes = []
         for campos in cls._ler_linhas(_ARQ_HOSPEDES):
             h = Hospede(campos[1], campos[2], campos[3], campos[4], id=int(campos[0]))
@@ -149,7 +149,7 @@ class Bancodedados:
 
     @classmethod
     def busca_hospedes_por_nome(cls, nome):
-        from .hospede import Hospede
+        from modelo.hospede import Hospede
         hospedes = []
         for campos in cls._ler_linhas(_ARQ_HOSPEDES):
             if nome.lower() in campos[1].lower():
@@ -198,7 +198,7 @@ class Bancodedados:
 
     @classmethod
     def busca_quarto(cls, id):
-        from .quarto import Quarto
+        from modelo.quarto import Quarto
         for campos in cls._ler_linhas(_ARQ_QUARTOS):
             if int(campos[0]) == id:
                 q = Quarto(campos[1], campos[2], float(campos[3]), bool(int(campos[4])), id=int(campos[0]))
@@ -208,7 +208,7 @@ class Bancodedados:
 
     @classmethod
     def lista_quartos(cls):
-        from .quarto import Quarto
+        from modelo.quarto import Quarto
         quartos = []
         for campos in cls._ler_linhas(_ARQ_QUARTOS):
             q = Quarto(campos[1], campos[2], float(campos[3]), bool(int(campos[4])), id=int(campos[0]))
@@ -271,7 +271,7 @@ class Bancodedados:
 
     @classmethod
     def busca_reserva(cls, id):
-        from .reserva import Reserva
+        from modelo.reserva import Reserva
         for campos in cls._ler_linhas(_ARQ_RESERVAS):
             if int(campos[0]) == id:
                 hospede = cls.busca_hospede(int(campos[1]))
@@ -284,7 +284,7 @@ class Bancodedados:
 
     @classmethod
     def lista_reservas(cls):
-        from .reserva import Reserva
+        from modelo.reserva import Reserva
         reservas = []
         for campos in cls._ler_linhas(_ARQ_RESERVAS):
             hospede = cls.busca_hospede(int(campos[1]))
@@ -332,7 +332,7 @@ class Bancodedados:
     @classmethod
     def _carrega_itens(cls, reserva_id):
         """Retorna lista de ItemReserva vinculados à reserva."""
-        from .item_reserva import ItemReserva
+        from modelo.item_reserva import ItemReserva
         itens = []
         for campos in cls._ler_linhas(_ARQ_ITENS):
             if int(campos[1]) == reserva_id:

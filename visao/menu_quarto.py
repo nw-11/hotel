@@ -1,5 +1,5 @@
-from ..modelo.banco_de_dados import Bancodedados
-from ..modelo.quarto import Quarto
+from modelo.banco_de_dados import Bancodedados
+from modelo.quarto import Quarto
 
 
 class Menu_Quarto:

@@ -1,6 +1,6 @@
-from ..modelo.banco_de_dados import Bancodedados
-from ..modelo.hospede import Hospede
-
+from modelo.banco_de_dados import Bancodedados
+from modelo.hospede import Hospede
+ 
 
 class Menu_Hospede:
     def __init__(self):

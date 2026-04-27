@@ -1,12 +1,12 @@
-from .entidade import Entidade
-from .banco_de_dados import Bancodedados
-from .item_reserva import ItemReserva
-
-
+from modelo.entidade import Entidade
+from modelo.banco_de_dados import Bancodedados
+from modelo.item_reserva import ItemReserva
+ 
+ 
 class Reserva(Entidade):
     """
     Representa uma reserva de quarto feita por um hóspede.
-
+ 
     Composição:
         - hospede  : Hospede  (quem reservou)
         - quarto   : Quarto   (qual quarto)
@@ -14,7 +14,7 @@ class Reserva(Entidade):
         - checkout : str      (data no formato DD/MM/AAAA)
         - itens    : list[ItemReserva]  (serviços e consumos extras)
     """
-
+ 
     def __init__(self, hospede, quarto, checkin, checkout, id=None):
         super().__init__(id)
         self.hospede = hospede
@@ -22,19 +22,23 @@ class Reserva(Entidade):
         self.checkin = checkin
         self.checkout = checkout
         self.itens: list[ItemReserva] = []
-
+ 
+    # ------------------------------------------------------------------
+    # Persistência
+    # ------------------------------------------------------------------
+ 
     def salvar(self):
         Bancodedados.salva_reserva(self)
         self.persistido = True
         for item in self.itens:
             if not item.persistido:
                 item.salvar(self.id)
-
+ 
     def atualizar(self):
         if not self.persistido:
             raise RuntimeError("Reserva ainda não foi salva. Use salvar() primeiro.")
         Bancodedados.atualiza_reserva(self)
-
+ 
     def apagar(self):
         if Bancodedados.apaga_reserva(self):
             self.id = None
@@ -42,15 +46,19 @@ class Reserva(Entidade):
             self.itens.clear()
             return True
         return False
-
+ 
+    # ------------------------------------------------------------------
+    # Gerenciamento de itens extras
+    # ------------------------------------------------------------------
+ 
     def adicionar_item(self, nome, preco):
         """Cria e persiste um item extra nesta reserva."""
         item = ItemReserva(nome, preco)
-        if self._persistido:
+        if self.persistido:
             item.salvar(self.id)
         self.itens.append(item)
         return item
-
+ 
     def remover_item(self, item):
         """Remove um item extra desta reserva."""
         if item in self.itens:
@@ -58,15 +66,22 @@ class Reserva(Entidade):
             self.itens.remove(item)
             return True
         return False
-
-
+ 
+    # ------------------------------------------------------------------
+    # Cálculo de valores
+    # ------------------------------------------------------------------
+ 
     def total_itens(self):
         return sum(item.preco for item in self.itens)
-
+ 
     def total_geral(self):
         """Soma diária do quarto + todos os itens extras."""
         return self.quarto.diaria + self.total_itens()
-
+ 
+    # ------------------------------------------------------------------
+    # Representação
+    # ------------------------------------------------------------------
+ 
     def __str__(self):
         linhas = [
             f"ID da Reserva : {self.id}",
@@ -82,3 +97,4 @@ class Reserva(Entidade):
                 linhas.append(f"  • {item}")
         linhas.append(f"TOTAL GERAL   : R$ {self.total_geral():.2f}")
         return "\n".join(linhas)
+ 

@@ -1,6 +1,6 @@
-from .menu_hospede import Menu_Hospede
-from .menu_quarto import Menu_Quarto
-from .menu_reserva import Menu_Reserva
+from visao.menu_hospede import Menu_Hospede
+from visao.menu_quarto import Menu_Quarto
+from visao.menu_reserva import Menu_Reserva
 
 
 class Menu_Principal:

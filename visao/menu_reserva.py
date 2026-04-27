@@ -1,6 +1,5 @@
-from ..modelo.banco_de_dados import Bancodedados
-from ..modelo.reserva import Reserva
-
+from modelo.banco_de_dados import Bancodedados
+from modelo.reserva import Reserva
 
 class Menu_Reserva:
     def __init__(self):
