@@ -329,3 +329,19 @@ class Bancodedados:
                 item.persistido = True
                 itens.append(item)
         return itens
+
+    @classmethod
+    def salva_itens_reserva(cls, reserva):
+        linhas = [l for l in cls._ler_linhas(_ARQ_ITENS) if int(l[1]) != reserva.id]
+        for item in reserva.itens:
+            linhas.append([0, reserva.id, item.nome, item.preco])
+        cls._escrever_linhas(_ARQ_ITENS, linhas)
+
+    @classmethod
+    def _carrega_itens(cls, reserva_id):
+        from modelo.item_reserva import ItemReserva
+        itens=[]
+        for campos in cls._ler_linhas(_ARQ_ITENS):
+            if int(campos[1]) == reserva_id:
+                itens.append(ItemReserva(campos[2], float(campos[3])))
+        return itens
