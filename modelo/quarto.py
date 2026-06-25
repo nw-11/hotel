@@ -5,9 +5,9 @@ from modelo.banco_de_dados import Bancodedados
 class Quarto(Entidade):
     def __init__(self, numero, tipo, diaria, disponivel=True, id=None):
         super().__init__(id)
-        self.numero = numero
-        self.tipo = tipo
-        self.diaria = float(diaria)
+        self.numero    = numero
+        self.tipo      = tipo
+        self.diaria    = float(diaria)
         self.disponivel = disponivel
 
     def salvar(self):
@@ -21,7 +21,7 @@ class Quarto(Entidade):
 
     def apagar(self):
         if Bancodedados.apaga_quarto(self):
-            self.id = None
+            self.id         = None
             self.persistido = False
             return True
         return False

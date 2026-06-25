@@ -13,7 +13,7 @@ class Menu_Quarto:
     def _criar_quarto(self):
         numero = input("Número do quarto: ")
         print("Tipos disponíveis: Standard, Luxo, Suite")
-        tipo = input("Tipo: ")
+        tipo   = input("Tipo: ")
         diaria = float(input("Valor da diária (R$): "))
         return Quarto(numero, tipo, diaria)
 
@@ -85,7 +85,9 @@ class Menu_Quarto:
         quarto = self._buscar_por_id()
         if quarto is None:
             return
-        confirma = input(f"Confirma remoção do quarto {quarto.numero}? (s/n): ").lower()
+        confirma = input(
+            f"Confirma remoção do quarto {quarto.numero}? (s/n): "
+        ).lower()
         if confirma == "s":
             if quarto.apagar():
                 print("Quarto removido com sucesso.")
