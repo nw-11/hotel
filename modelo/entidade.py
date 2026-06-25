@@ -1,22 +1,17 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 
 
 class Entidade(ABC):
     def __init__(self, id=None):
         self.id = id
-        self.persistido = False
 
-    def is_persistido(self):
-        return self.persistido
+    def __eq__(self, other):
+        if isinstance(other, Entidade):
+            return self.id == other.id
+        return False
 
-    @abstractmethod
-    def salvar(self):
-        pass
+    def __lt__(self, other):
+        return self.id < other.id
 
-    @abstractmethod
-    def atualizar(self):
-        pass
-
-    @abstractmethod
-    def apagar(self):
-        pass
+    def __hash__(self):
+        return hash(self.id)
