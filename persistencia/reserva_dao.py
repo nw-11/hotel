@@ -1,297 +1,108 @@
 from modelo.reserva import Reserva
 from modelo.item_reserva import ItemReserva
+from persistencia.entidade_dao import EntidadeDAO
+from persistencia.arquivo_utils import (
+    ARQ_RESERVAS,
+    ARQ_ITENS,
+    ler_linhas,
+    escrever_linhas
+)
 
-from persistencia.persistence_exception import PersistenceException
-from persistencia.arquivo_utils import *
 
-from persistencia.hospede_dao import HospedeDAO
-from persistencia.quarto_dao import QuartoDAO
-from persistencia.produto_dao import ProdutoDAO
-
-
-class ReservaDAO:
-
-    def __init__(self):
-
-        self.hospedeDAO = HospedeDAO()
-        self.quartoDAO = QuartoDAO()
-        self.produtoDAO = ProdutoDAO()
-
-    # -------------------------------------------------------------
-    # salvar
-    # -------------------------------------------------------------
+class ReservaDAO(EntidadeDAO[Reserva]):
+    def __init__(self, hospedeDAO, quartoDAO, produtoDAO):
+        super().__init__()
+        self.hospedeDAO = hospedeDAO
+        self.quartoDAO = quartoDAO
+        self.produtoDAO = produtoDAO
 
     def salvar(self, reserva):
-
-        linhas = ler_linhas(ARQ_RESERVAS)
-
-        for linha in linhas:
-
-            if int(linha[0]) == reserva.id:
-
-                raise PersistenceException(
-                    "salvar",
-                    "Reserva já existe",
-                    reserva.id
-                )
-
-        linhas.append([
-            reserva.id,
-            reserva.hospede.id,
-            reserva.quarto.id,
-            reserva.checkin,
-            reserva.checkout
-        ])
-
-        escrever_linhas(
-            ARQ_RESERVAS,
-            linhas
-        )
-
-        # marca quarto como ocupado
+        super().salvar(reserva)
 
         reserva.quarto.disponivel = False
-
-        self.quartoDAO.atualizar(
-            reserva.quarto
-        )
-
-        # salva itens da reserva
-
-        self.salvarItens(
-            reserva
-        )
-
-    # -------------------------------------------------------------
-    # atualizar
-    # -------------------------------------------------------------
-
-    def atualizar(self, reserva):
-
-        linhas = ler_linhas(
-            ARQ_RESERVAS
-        )
-
-        encontrou = False
-
-        for i, linha in enumerate(linhas):
-
-            if int(linha[0]) == reserva.id:
-
-                linhas[i] = [
-                    reserva.id,
-                    reserva.hospede.id,
-                    reserva.quarto.id,
-                    reserva.checkin,
-                    reserva.checkout
-                ]
-
-                encontrou = True
-
-        if not encontrou:
-
-            raise PersistenceException(
-                "atualizar",
-                "Reserva inexistente",
-                reserva.id
-            )
-
-        escrever_linhas(
-            ARQ_RESERVAS,
-            linhas
-        )
-
-        # reescreve itens
-
-        self.salvarItens(
-            reserva
-        )
-
-    # -------------------------------------------------------------
-    # apagar
-    # -------------------------------------------------------------
+        self.quartoDAO.atualizar(reserva.quarto)
 
     def apagar(self, id):
+        reserva = super().apagar(id)
 
-        reserva = self.carregar(id)
+        reserva.quarto.disponivel = True
+        self.quartoDAO.atualizar(reserva.quarto)
 
-        linhas = ler_linhas(
-            ARQ_RESERVAS
-        )
+        return reserva
 
-        novas = [
-            l for l in linhas
-            if int(l[0]) != id
-        ]
+    def persistir(self):
+        linhas_reservas = []
+        linhas_itens = []
 
-        if len(novas) == len(linhas):
+        for r in self._ordenadas_por_id():
+            linhas_reservas.append([
+                r.id,
+                r.hospede.id,
+                r.quarto.id,
+                r.checkin,
+                r.checkout
+            ])
 
-            raise PersistenceException(
-                "apagar",
-                "Reserva inexistente",
-                id
-            )
+            for item in r.itens:
+                linhas_itens.append([
+                    r.id,
+                    item.produto.id,
+                    item.quantidade
+                ])
 
         escrever_linhas(
             ARQ_RESERVAS,
-            novas
+            linhas_reservas
         )
-
-        # remove itens
-
-        itens = ler_linhas(
-            ARQ_ITENS
-        )
-
-        novas_itens = [
-
-            i for i in itens
-
-            if int(i[0]) != id
-        ]
 
         escrever_linhas(
             ARQ_ITENS,
-            novas_itens
+            linhas_itens
         )
 
-        # libera quarto
+    def recuperar(self):
+        self.entidades.clear()
 
-        reserva.quarto.disponivel = True
+        linhas_itens = ler_linhas(ARQ_ITENS)
 
-        self.quartoDAO.atualizar(
-            reserva.quarto
-        )
-
-    # -------------------------------------------------------------
-    # carregar
-    # -------------------------------------------------------------
-
-    def carregar(self, id):
-
-        linhas = ler_linhas(
-            ARQ_RESERVAS
-        )
-
-        for linha in linhas:
-
-            if int(linha[0]) == id:
-
-                hospede = self.hospedeDAO.carregar(
-                    int(linha[1])
-                )
-
-                quarto = self.quartoDAO.carregar(
-                    int(linha[2])
-                )
-
-                reserva = Reserva(
-                    hospede,
-                    quarto,
-                    linha[3],
-                    linha[4],
-                    int(linha[0])
-                )
-
-                reserva.itens = self.carregarItens(
-                    reserva.id
-                )
-
-                return reserva
-
-        raise PersistenceException(
-            "carregar",
-            "Reserva não encontrada",
-            id
-        )
-
-    # -------------------------------------------------------------
-    # carregar todos
-    # -------------------------------------------------------------
-
-    def carregarTodos(self):
-
-        linhas = ler_linhas(
-            ARQ_RESERVAS
-        )
-
-        if len(linhas) == 0:
-
-            raise PersistenceException(
-                "carregarTodos",
-                "Nenhuma reserva salva",
-                None
+        for linha in ler_linhas(ARQ_RESERVAS):
+            hospede = self.hospedeDAO.carregar(
+                int(linha[1])
             )
 
-        reservas = []
-
-        for linha in linhas:
-
-            reservas.append(
-                self.carregar(
-                    int(linha[0])
-                )
+            quarto = self.quartoDAO.carregar(
+                int(linha[2])
             )
 
-        reservas.sort()
+            reserva = Reserva(
+                hospede,
+                quarto,
+                linha[3],
+                linha[4],
+                id=int(linha[0])
+            )
 
-        return reservas
+            reserva.itens = self._recuperar_itens(
+                reserva.id,
+                linhas_itens
+            )
 
-    # -------------------------------------------------------------
-    # itens reserva
-    # -------------------------------------------------------------
+            self.entidades.add(reserva)
 
-    def carregarItens(self, reserva_id):
-
+    def _recuperar_itens(self, reserva_id, linhas_itens):
         itens = []
 
-        linhas = ler_linhas(
-            ARQ_ITENS
-        )
-
-        for linha in linhas:
-
+        for linha in linhas_itens:
             if int(linha[0]) == reserva_id:
-
                 produto = self.produtoDAO.carregar(
                     int(linha[1])
                 )
 
-                item = ItemReserva(
-                    produto,
-                    int(linha[2])
+                itens.append(
+                    ItemReserva(
+                        produto,
+                        int(linha[2])
+                    )
                 )
 
-                itens.append(item)
-
         return itens
-
-    def salvarItens(self, reserva):
-
-        # remove antigos
-
-        linhas = ler_linhas(
-            ARQ_ITENS
-        )
-
-        linhas = [
-
-            l for l in linhas
-
-            if int(l[0]) != reserva.id
-        ]
-
-        # adiciona atuais
-
-        for item in reserva.itens:
-
-            linhas.append([
-                reserva.id,
-                item.produto.id,
-                item.quantidade
-            ])
-
-        escrever_linhas(
-            ARQ_ITENS,
-            linhas
-        )

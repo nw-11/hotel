@@ -1,158 +1,56 @@
 from modelo.quarto import Quarto
+from persistencia.entidade_dao import EntidadeDAO
+from persistencia.arquivo_utils import (
+    ARQ_QUARTOS,
+    ler_linhas,
+    escrever_linhas
+)
 from persistencia.persistence_exception import PersistenceException
-from persistencia.arquivo_utils import *
 
 
-class QuartoDAO:
+class QuartoDAO(EntidadeDAO[Quarto]):
+    def persistir(self):
+        linhas = []
 
-    def salvar(self, quarto):
-
-        linhas = ler_linhas(ARQ_QUARTOS)
-
-        for linha in linhas:
-
-            if int(linha[0]) == quarto.id:
-
-                raise PersistenceException(
-                    "salvar",
-                    "Quarto já existe",
-                    quarto.id
-                )
-
-        linhas.append([
-            quarto.id,
-            quarto.numero,
-            quarto.tipo,
-            quarto.diaria,
-            int(quarto.disponivel)
-        ])
+        for q in self._ordenadas_por_id():
+            linhas.append([
+                q.id,
+                q.numero,
+                q.tipo,
+                q.diaria,
+                int(q.disponivel)
+            ])
 
         escrever_linhas(
             ARQ_QUARTOS,
             linhas
         )
 
-    def atualizar(self, quarto):
+    def recuperar(self):
+        self.entidades.clear()
 
-        linhas = ler_linhas(
-            ARQ_QUARTOS
-        )
-
-        encontrou = False
-
-        for i, linha in enumerate(linhas):
-
-            if int(linha[0]) == quarto.id:
-
-                linhas[i] = [
-                    quarto.id,
-                    quarto.numero,
-                    quarto.tipo,
-                    quarto.diaria,
-                    int(quarto.disponivel)
-                ]
-
-                encontrou = True
-
-        if not encontrou:
-
-            raise PersistenceException(
-                "atualizar",
-                "Quarto inexistente",
-                quarto.id
+        for linha in ler_linhas(ARQ_QUARTOS):
+            quarto = Quarto(
+                linha[1],
+                linha[2],
+                float(linha[3]),
+                bool(int(linha[4])),
+                id=int(linha[0])
             )
 
-        escrever_linhas(
-            ARQ_QUARTOS,
-            linhas
-        )
+            self.entidades.add(quarto)
 
-    def apagar(self, id):
-
-        linhas = ler_linhas(
-            ARQ_QUARTOS
-        )
-
-        novas = [
-            l for l in linhas
-            if int(l[0]) != id
+    def carregarDisponiveis(self):
+        disponiveis = [
+            q for q in self._ordenadas_por_id()
+            if q.disponivel
         ]
 
-        if len(novas) == len(linhas):
-
-            raise PersistenceException(
-                "apagar",
-                "Quarto inexistente",
-                id
-            )
-
-        escrever_linhas(
-            ARQ_QUARTOS,
-            novas
-        )
-
-    def carregar(self, id):
-
-        linhas = ler_linhas(
-            ARQ_QUARTOS
-        )
-
-        for linha in linhas:
-
-            if int(linha[0]) == id:
-
-                return Quarto(
-                    linha[1],
-                    linha[2],
-                    float(linha[3]),
-                    bool(int(linha[4])),
-                    int(linha[0])
-                )
-
-        raise PersistenceException(
-            "carregar",
-            "Quarto não encontrado",
-            id
-        )
-
-    def carregarTodos(self):
-
-        linhas = ler_linhas(
-            ARQ_QUARTOS
-        )
-
-        if len(linhas) == 0:
-
+        if len(disponiveis) == 0:
             raise PersistenceException(
                 "carregarTodos",
-                "Nenhum quarto salvo",
+                "nenhum quarto disponível",
                 None
             )
 
-        quartos = []
-
-        for linha in linhas:
-
-            quartos.append(
-
-                Quarto(
-                    linha[1],
-                    linha[2],
-                    float(linha[3]),
-                    bool(int(linha[4])),
-                    int(linha[0])
-                )
-            )
-
-        quartos.sort()
-
-        return quartos
-
-    def carregarDisponiveis(self):
-
-        quartos = self.carregarTodos()
-
-        return [
-            q for q in quartos
-            if q.disponivel
-        ]
+        return disponiveis

@@ -1,175 +1,54 @@
 from modelo.produto import Produto
+from persistencia.entidade_dao import EntidadeDAO
+from persistencia.arquivo_utils import (
+    ARQ_PRODUTOS,
+    ler_linhas,
+    escrever_linhas
+)
 from persistencia.persistence_exception import PersistenceException
-from persistencia.arquivo_utils import *
 
 
-class ProdutoDAO:
+class ProdutoDAO(EntidadeDAO[Produto]):
+    def persistir(self):
+        linhas = []
 
-    def salvar(self, produto):
-
-        linhas = ler_linhas(ARQ_PRODUTOS)
-
-        for linha in linhas:
-
-            if int(linha[0]) == produto.id:
-
-                raise PersistenceException(
-                    "salvar",
-                    "Produto já existe",
-                    produto.id
-                )
-
-        linhas.append([
-            produto.id,
-            produto.nome,
-            produto.preco,
-            produto.categoria
-        ])
+        for p in self._ordenadas_por_id():
+            linhas.append([
+                p.id,
+                p.nome,
+                p.preco,
+                p.categoria
+            ])
 
         escrever_linhas(
             ARQ_PRODUTOS,
             linhas
         )
 
-    def atualizar(self, produto):
+    def recuperar(self):
+        self.entidades.clear()
 
-        linhas = ler_linhas(
-            ARQ_PRODUTOS
-        )
-
-        encontrou = False
-
-        for i, linha in enumerate(linhas):
-
-            if int(linha[0]) == produto.id:
-
-                linhas[i] = [
-                    produto.id,
-                    produto.nome,
-                    produto.preco,
-                    produto.categoria
-                ]
-
-                encontrou = True
-
-        if not encontrou:
-
-            raise PersistenceException(
-                "atualizar",
-                "Produto inexistente",
-                produto.id
+        for linha in ler_linhas(ARQ_PRODUTOS):
+            produto = Produto(
+                linha[1],
+                float(linha[2]),
+                linha[3],
+                id=int(linha[0])
             )
 
-        escrever_linhas(
-            ARQ_PRODUTOS,
-            linhas
-        )
+            self.entidades.add(produto)
 
-    def apagar(self, id):
-
-        # verifica se produto está em alguma reserva
-
-        itens = ler_linhas(
-            ARQ_ITENS
-        )
-
-        for item in itens:
-
-            if int(item[1]) == id:
-
-                raise PersistenceException(
-                    "apagar",
-                    "Produto vinculado a reserva",
-                    id
-                )
-
-        linhas = ler_linhas(
-            ARQ_PRODUTOS
-        )
-
-        novas = [
-            l for l in linhas
-            if int(l[0]) != id
+    def carregarPorCategoria(self, categoria):
+        produtos = [
+            p for p in self._ordenadas_por_id()
+            if p.categoria.lower() == categoria.lower()
         ]
 
-        if len(linhas) == len(novas):
-
-            raise PersistenceException(
-                "apagar",
-                "Produto inexistente",
-                id
-            )
-
-        escrever_linhas(
-            ARQ_PRODUTOS,
-            novas
-        )
-
-    def carregar(self, id):
-
-        linhas = ler_linhas(
-            ARQ_PRODUTOS
-        )
-
-        for linha in linhas:
-
-            if int(linha[0]) == id:
-
-                return Produto(
-                    linha[1],
-                    float(linha[2]),
-                    linha[3],
-                    int(linha[0])
-                )
-
-        raise PersistenceException(
-            "carregar",
-            "Produto não encontrado",
-            id
-        )
-
-    def carregarTodos(self):
-
-        linhas = ler_linhas(
-            ARQ_PRODUTOS
-        )
-
-        if len(linhas) == 0:
-
+        if len(produtos) == 0:
             raise PersistenceException(
                 "carregarTodos",
-                "Nenhum produto salvo",
-                None
+                "nenhum produto encontrado nessa categoria",
+                categoria
             )
-
-        produtos = []
-
-        for linha in linhas:
-
-            produtos.append(
-
-                Produto(
-                    linha[1],
-                    float(linha[2]),
-                    linha[3],
-                    int(linha[0])
-                )
-            )
-
-        produtos.sort()
 
         return produtos
-
-    def carregarPorCategoria(
-        self,
-        categoria
-    ):
-
-        produtos = self.carregarTodos()
-
-        return [
-
-            p for p in produtos
-
-            if p.categoria.lower() == categoria.lower()
-        ] 

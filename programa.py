@@ -1,15 +1,23 @@
 from visao.menu_principal import Menu_Principal
+from persistencia.dao_factory import DAOFactory
 from persistencia.id_manager import IDManager
 
 
 def main():
 
-    # garante criação/controle do arquivo de ids
     IDManager.inicializar()
 
-    app = Menu_Principal()
+    DAOFactory.recuperarTodos()
 
-    app.menu()
+    try:
+
+        app = Menu_Principal()
+
+        app.menu()
+
+    finally:
+
+        DAOFactory.persistirTodos()
 
 
 if __name__ == "__main__":
