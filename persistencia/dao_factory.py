@@ -5,11 +5,14 @@ from persistencia.reserva_dao import ReservaDAO
 
 
 class DAOFactory:
-
     hospedeDAO = HospedeDAO()
     quartoDAO = QuartoDAO()
     produtoDAO = ProdutoDAO()
-    reservaDAO = ReservaDAO()
+    reservaDAO = ReservaDAO(
+        hospedeDAO,
+        quartoDAO,
+        produtoDAO
+    )
 
     @staticmethod
     def getHospedeDAO():
@@ -26,3 +29,17 @@ class DAOFactory:
     @staticmethod
     def getReservaDAO():
         return DAOFactory.reservaDAO
+
+    @staticmethod
+    def recuperarTodos():
+        DAOFactory.hospedeDAO.recuperar()
+        DAOFactory.quartoDAO.recuperar()
+        DAOFactory.produtoDAO.recuperar()
+        DAOFactory.reservaDAO.recuperar()
+
+    @staticmethod
+    def persistirTodos():
+        DAOFactory.hospedeDAO.persistir()
+        DAOFactory.quartoDAO.persistir()
+        DAOFactory.produtoDAO.persistir()
+        DAOFactory.reservaDAO.persistir()

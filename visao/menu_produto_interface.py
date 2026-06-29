@@ -45,6 +45,7 @@ class FrameProdutos(Frame):
             i.pack_forget()
 
         self.visual.pack(fill="both", expand=True)
+        self.visual.resultado.config(text="")
 
     def Chama_PList(self):
         for i in self.frames:
