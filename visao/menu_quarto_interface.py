@@ -3,6 +3,7 @@ from modelo.quarto import Quarto
 from persistencia.dao_factory import DAOFactory
 from persistencia.id_manager import IDManager
 from persistencia.persistence_exception import PersistenceException
+from visao.tabela_utils import TabelaOrdenavel
 
 
 #Frames Quartos---------------------------------------------------------------                
@@ -59,14 +60,14 @@ class FrameQuartos(Frame):
             i.pack_forget()
 
         self.list.pack(fill="both", expand=True)
-        self.list.lista.delete(0, END)
+        self.list.limpar_tela()
 
     def Chama_QDisponiveis(self):
         for i in self.frames:
             i.pack_forget()
 
         self.disponiveis.pack(fill="both", expand=True)
-        self.disponiveis.lista.delete(0, END)
+        self.disponiveis.limpar_tela()
 
 class FrameQCad(Frame):
     def __init__(self, container):
@@ -263,45 +264,54 @@ class FrameQList(Frame):
         self.dao = DAOFactory.getQuartoDAO()
         Button(self, text="Listar Quartos", command=self.listar).pack(pady=10)
 
-        self.lista = Listbox(self, width=90, height=15)
-        self.lista.pack()
+        self.tabela = TabelaOrdenavel(
+            self,
+            [
+                ("id", "ID", 60, lambda quarto: quarto.id),
+                ("numero", "Numero", 100, lambda quarto: quarto.numero),
+                ("tipo", "Tipo", 140, lambda quarto: quarto.tipo),
+                ("diaria", "Diaria", 100, lambda quarto: quarto.diaria),
+                ("disponivel", "Disponivel", 120, lambda quarto: quarto.disponivel),
+            ]
+        )
+        self.tabela.pack(fill="both", expand=True, padx=10, pady=10)
 
     def listar(self):
-        self.lista.delete(0, END)
         try:
-            quartos = []
-            quartos = self.dao.carregarTodos()
-            for quarto in quartos:
-                if quarto.disponivel:
-                    self.lista.insert(END, f"id = {quarto.id} | n° = {quarto.numero} | categoria = {quarto.tipo} | disponibilidade = true")
-                else:
-                    self.lista.insert(END, f"id = {quarto.id} | n° = {quarto.numero} | categoria = {quarto.tipo} | disponibilidade = false")
+            self.tabela.carregar(self.dao.carregarTodos())
         except PersistenceException as e:
-            self.lista.delete(0, END)
-            self.lista.insert(END, str(e))
-            self.lista.itemconfig(END, fg="red")
+            self.tabela.mostrar_erro(str(e))
+
+    def limpar_tela(self):
+        self.tabela.limpar()
 
 class FrameQDisponiveis(Frame):
     def __init__(self, container):
         super().__init__(container)
         self.dao = DAOFactory.getQuartoDAO()
-        Button(self, text="Listar Disponíveis", command=self.listar).pack(pady=10)
+        Button(self, text="Listar Disponiveis", command=self.listar).pack(pady=10)
 
-        self.lista = Listbox(self, width=90, height=15)
-        self.lista.pack()
+        self.tabela = TabelaOrdenavel(
+            self,
+            [
+                ("id", "ID", 60, lambda quarto: quarto.id),
+                ("numero", "Numero", 100, lambda quarto: quarto.numero),
+                ("tipo", "Tipo", 140, lambda quarto: quarto.tipo),
+                ("diaria", "Diaria", 100, lambda quarto: quarto.diaria),
+                ("disponivel", "Disponivel", 120, lambda quarto: quarto.disponivel),
+            ]
+        )
+        self.tabela.pack(fill="both", expand=True, padx=10, pady=10)
 
     def listar(self):
-        self.lista.delete(0, END)
         try:
-            quartos = []
-            quartos = self.dao.carregarDisponiveis()
+            quartos = self.dao.filtrar(lambda quarto: quarto.disponivel)
             if len(quartos) == 0:
-                self.lista.insert(END, "Nenhum quarto disponivel")
-                self.lista.itemconfig(END, fg="red")
+                self.tabela.mostrar_erro("Nenhum quarto disponivel")
                 return
-            for quarto in quartos:
-                    self.lista.insert(END, f"id = {quarto.id} | n° = {quarto.numero} | categoria = {quarto.tipo}")
+            self.tabela.carregar(quartos)
         except PersistenceException as e:
-            self.lista.delete(0, END)
-            self.lista.insert(END, str(e))
-            self.lista.itemconfig(END, fg="red")
+            self.tabela.mostrar_erro(str(e))
+
+    def limpar_tela(self):
+        self.tabela.limpar()

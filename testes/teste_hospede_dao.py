@@ -1,6 +1,9 @@
 import unittest
 
 from modelo.hospede import Hospede
+from modelo.quarto import Quarto
+from modelo.reserva import Reserva
+
 from persistencia.dao_factory import DAOFactory
 from persistencia.persistence_exception import PersistenceException
 
@@ -8,8 +11,17 @@ from persistencia.persistence_exception import PersistenceException
 class TesteHospedeDAO(unittest.TestCase):
 
     def setUp(self):
-        self.dao = DAOFactory.getHospedeDAO()
-        self.dao.entidades.clear()
+        self.hospedeDAO = DAOFactory.getHospedeDAO()
+        self.quartoDAO = DAOFactory.getQuartoDAO()
+        self.produtoDAO = DAOFactory.getProdutoDAO()
+        self.reservaDAO = DAOFactory.getReservaDAO()
+
+        self.hospedeDAO.entidades.clear()
+        self.quartoDAO.entidades.clear()
+        self.produtoDAO.entidades.clear()
+        self.reservaDAO.entidades.clear()
+
+        self.dao = self.hospedeDAO
 
     # ---------------- SALVAR ----------------
 
@@ -81,7 +93,7 @@ class TesteHospedeDAO(unittest.TestCase):
         with self.assertRaises(PersistenceException):
             self.dao.apagar(8888)
 
-    def test_apagar_id_existente(self):
+    def test_apagar_id_existente_sem_reserva_ativa(self):
         h = Hospede(
             "Julia",
             "444",
@@ -98,6 +110,41 @@ class TesteHospedeDAO(unittest.TestCase):
 
         with self.assertRaises(PersistenceException):
             self.dao.carregar(5003)
+
+    def test_nao_apagar_hospede_com_reserva_ativa(self):
+        h = Hospede(
+            "Marcos",
+            "777",
+            "marcos@gmail.com",
+            "7777"
+        )
+        h.id = 5005
+        self.hospedeDAO.salvar(h)
+
+        q = Quarto(
+            "201",
+            "Suite",
+            350.0
+        )
+        q.id = 6005
+        self.quartoDAO.salvar(q)
+
+        reserva = Reserva(
+            h,
+            q,
+            "10/06/2026",
+            "12/06/2026"
+        )
+        reserva.id = 10005
+        self.reservaDAO.salvar(reserva)
+
+        with self.assertRaises(PersistenceException):
+            self.hospedeDAO.apagar(5005)
+
+        self.assertEqual(
+            self.hospedeDAO.carregar(5005).nome,
+            "Marcos"
+        )
 
     # ---------------- CARREGAR ----------------
 
@@ -119,6 +166,25 @@ class TesteHospedeDAO(unittest.TestCase):
         resultado = self.dao.carregar(5004)
 
         self.assertEqual(resultado.nome, "Lucas")
+
+    # ---------------- CARREGAR TODOS ----------------
+
+    def test_carregar_todos_ordenado_por_id(self):
+        h2 = Hospede("B", "2", "b@gmail.com", "2")
+        h2.id = 2
+
+        h1 = Hospede("A", "1", "a@gmail.com", "1")
+        h1.id = 1
+
+        self.dao.salvar(h2)
+        self.dao.salvar(h1)
+
+        resultado = self.dao.carregarTodos()
+
+        self.assertEqual(
+            [h.id for h in resultado],
+            [1, 2]
+        )
 
 
 if __name__ == "__main__":

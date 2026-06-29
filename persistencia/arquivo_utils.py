@@ -18,19 +18,11 @@ def garantir_arquivo(caminho):
 
 def ler_linhas(caminho):
     garantir_arquivo(caminho)
-
     with open(caminho, "r", encoding="utf-8") as f:
-        return [
-            linha.strip().split(SEP)
-            for linha in f
-            if linha.strip()
-        ]
+        return [linha.strip().split(SEP) for linha in f if linha.strip()]
 
 
 def escrever_linhas(caminho, linhas):
     with open(caminho, "w", encoding="utf-8") as f:
         for campos in linhas:
-            f.write(
-                SEP.join(str(c) for c in campos)
-                + "\n"
-            )
+            f.write(SEP.join(str(c) for c in campos) + "\n")

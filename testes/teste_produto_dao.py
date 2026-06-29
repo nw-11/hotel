@@ -1,6 +1,7 @@
 import unittest
 
 from modelo.produto import Produto
+
 from persistencia.dao_factory import DAOFactory
 from persistencia.persistence_exception import PersistenceException
 
@@ -8,8 +9,17 @@ from persistencia.persistence_exception import PersistenceException
 class TesteProdutoDAO(unittest.TestCase):
 
     def setUp(self):
-        self.dao = DAOFactory.getProdutoDAO()
-        self.dao.entidades.clear()
+        self.hospedeDAO = DAOFactory.getHospedeDAO()
+        self.quartoDAO = DAOFactory.getQuartoDAO()
+        self.produtoDAO = DAOFactory.getProdutoDAO()
+        self.reservaDAO = DAOFactory.getReservaDAO()
+
+        self.hospedeDAO.entidades.clear()
+        self.quartoDAO.entidades.clear()
+        self.produtoDAO.entidades.clear()
+        self.reservaDAO.entidades.clear()
+
+        self.dao = self.produtoDAO
 
     # ---------------- SALVAR ----------------
 
@@ -89,6 +99,29 @@ class TesteProdutoDAO(unittest.TestCase):
         resultado = self.dao.carregar(7004)
 
         self.assertEqual(resultado.nome, "Refrigerante")
+
+    # ---------------- FILTRAR POR CATEGORIA ----------------
+
+    def test_carregar_produtos_por_categoria(self):
+        p1 = Produto("Água", 5.0, "Bebidas")
+        p1.id = 1
+
+        p2 = Produto("Sabonete", 3.0, "Comodidades")
+        p2.id = 2
+
+        p3 = Produto("Suco", 8.0, "Bebidas")
+        p3.id = 3
+
+        self.produtoDAO.salvar(p1)
+        self.produtoDAO.salvar(p2)
+        self.produtoDAO.salvar(p3)
+
+        bebidas = DAOFactory.carregarProdutosPorCategoria("Bebidas")
+
+        self.assertEqual(
+            [p.nome for p in bebidas],
+            ["Água", "Suco"]
+        )
 
 
 if __name__ == "__main__":

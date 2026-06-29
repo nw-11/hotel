@@ -3,6 +3,7 @@ from modelo.hospede import Hospede
 from persistencia.dao_factory import DAOFactory
 from persistencia.id_manager import IDManager
 from persistencia.persistence_exception import PersistenceException
+from visao.tabela_utils import TabelaOrdenavel
 
 
 #Frames referentes à Hospedagem------------------------------------------------
@@ -58,7 +59,7 @@ class FrameHospedes(Frame):
     def Chama_HList(self):
         for i in self.frames:
             i.pack_forget()
-        self.list.lista.delete(0, END)
+        self.list.limpar_tela()
         self.list.pack(fill="both", expand=True)   
 
     def Chama_HSearch(self):
@@ -66,7 +67,7 @@ class FrameHospedes(Frame):
             i.pack_forget()
         
         self.search.Enome.delete(0, END)
-        self.search.lista.delete(0, END)
+        self.search.limpar_tela()
         self.search.pack(fill="both", expand=True)    
                 
 class FrameCad(Frame):
@@ -130,32 +131,32 @@ class FrameCad(Frame):
                 
         elif((not self.cpf.isdigit()) or len(self.cpf) != 11):
             self.msg["text"] = "Erro: CPF Inválido"
-            if (self.msg_exists == False):
-                self.msg.pack()
-                self.msg_exists = True
+            self.msg["fg"] = "red"
+            self.msg.pack()
+            self.msg_exists = True
 
         elif(not self.tel.isdigit() or (len(self.tel) < 10 or len(self.tel) > 11)):
             self.msg["text"] = "Erro: Telefone inválido"
-            if (self.msg_exists == False):
-                self.msg.pack()
-                self.msg_exists = True
+            self.msg["fg"] = "red"
+            self.msg.pack()
+            self.msg_exists = True
 
         elif "@" not in self.email or "." not in self.email.split("@")[-1]:
             self.msg["text"] = "Erro: E-mail inválido"
-            if (self.msg_exists == False):
-                self.msg.pack()
-                self.msg_exists = True
+            self.msg["fg"] = "red"
+            self.msg.pack()
+            self.msg_exists = True
 
         else:
             try:
                 h = Hospede(self.nome, self.cpf, self.email, self.tel)
                 h.id = IDManager.proximo_id_hospede()
                 self.dao.salvar(h)
-                self.msg.pack_forget()
-                self.msg = Label(self, text="Hóspede cadastrado com sucesso.")
+                self.msg.config(text="Hóspede cadastrado com sucesso.", fg="black")
                 self.msg.pack()
                 self.after(3000, lambda: self.msg.config(text=""))
-                self.msg_exists=False
+                self.msg_exists = False
+
                 self.Enome.delete(0, END)
                 self.Ecpf.delete(0, END)
                 self.Eemail.delete(0, END)
@@ -163,6 +164,7 @@ class FrameCad(Frame):
 
             except Exception as e:
                 self.msg["text"] = str(e)
+                self.msg["fg"] = "red"
                 self.msg.pack()
                 self.msg_exists = True
 
@@ -222,27 +224,34 @@ class FrameHEdit(Frame):
         self.tel = self.Etel.get()
 
         if (self.id == "" or self.nome == "" or self.cpf == "" or self.email == "" or self.tel == ""):
-            if (self.msg_exists == False):
-                self.msg["text"] = "Erro: Informações insuficientes."
-                self.msg.pack()
-                self.msg_exists = True
+            self.msg["text"] = "Erro: Informações insuficientes."
+            self.msg["fg"] = "red"
+            self.msg.pack()
+            self.msg_exists = True
+
+        elif not self.id.isdigit():
+            self.msg["text"] = "ID inválido."
+            self.msg["fg"] = "red"
+            self.msg.pack()
+            self.msg_exists = True
+
         elif((not self.cpf.isdigit()) or len(self.cpf) != 11):
             self.msg["text"] = "Erro: CPF Inválido"
-            if (self.msg_exists == False):
-                self.msg.pack()
-                self.msg_exists = True
+            self.msg["fg"] = "red"
+            self.msg.pack()
+            self.msg_exists = True
 
         elif(not self.tel.isdigit() or (len(self.tel) < 10 or len(self.tel) > 11)):
             self.msg["text"] = "Erro: Telefone inválido"
-            if (self.msg_exists == False):
-                self.msg.pack()
-                self.msg_exists = True
+            self.msg["fg"] = "red"
+            self.msg.pack()
+            self.msg_exists = True
 
         elif "@" not in self.email or "." not in self.email.split("@")[-1]:
             self.msg["text"] = "Erro: E-mail inválido"
-            if (self.msg_exists == False):
-                self.msg.pack()
-                self.msg_exists = True
+            self.msg["fg"] = "red"
+            self.msg.pack()
+            self.msg_exists = True
         else:
             try:
                 h = self.dao.carregar(int(self.id))
@@ -254,7 +263,7 @@ class FrameHEdit(Frame):
                 self.dao.atualizar(h)
 
                 self.msg.pack_forget()
-                self.msg.config(text="Hóspede atualizado com sucesso.")
+                self.msg.config(text="Hóspede atualizado com sucesso.", fg="black")
                 self.msg.pack()
                 self.after(3000, lambda: self.msg.config(text=""))
                 self.msg_exists=False
@@ -344,92 +353,82 @@ class FrameHList(Frame):
     def __init__(self, container):
         super().__init__(container)
         self.dao = DAOFactory.getHospedeDAO()
-        Button(self, text="Listar Hóspedes", command=self.listar).pack(pady=10)
+        Button(self, text="Listar Hospedes", command=self.listar).pack(pady=10)
 
-        frame_lista = Frame(self)
-        frame_lista.pack(pady=10)
-
-        scrollbar = Scrollbar(frame_lista, orient="vertical")
-        scrollbar.pack(side="right", fill="y")
-
-        self.lista = Listbox(frame_lista, width=110, height=15)
-        self.lista.pack(side="left", fill="both", expand=True)
-
-        self.lista.config(yscrollcommand=scrollbar.set)
-        scrollbar.config(command=self.lista.yview)
+        self.tabela = TabelaOrdenavel(
+            self,
+            [
+                ("id", "ID", 60, lambda hospede: hospede.id),
+                ("nome", "Nome", 220, lambda hospede: hospede.nome),
+                ("cpf", "CPF", 130, lambda hospede: hospede.cpf),
+                ("email", "E-mail", 220, lambda hospede: hospede.email),
+                ("telefone", "Telefone", 120, lambda hospede: hospede.telefone),
+            ]
+        )
+        self.tabela.pack(fill="both", expand=True, padx=10, pady=10)
         
     def listar(self):
-        hospedes = []
         try:
-            hospedes = self.dao.carregarTodos()
+            self.tabela.carregar(self.dao.carregarTodos())
         except PersistenceException as e:
-            self.lista.insert(END, str(e))
-            return
-        
-        self.lista.delete(0, END)
-        for hospede in hospedes:
-            self.lista.insert(END, f"ID: {hospede.id} | Nome: {hospede.nome} | CPF: {hospede.cpf} | E-mail: {hospede.email} | Tel: {hospede.telefone}")
+            self.tabela.mostrar_erro(str(e))
     
     def limpar_tela(self):
-        self.lista.delete(0, END)
+        self.tabela.limpar()
 
 class FrameHSearch(Frame):
     def __init__(self, container):
         super().__init__(container)
         self.dao = DAOFactory.getHospedeDAO()
 
-        frame_esquerda = Frame(self)
-        frame_esquerda.pack(side="left", anchor="n", padx=20, pady=20)
+        frame_busca = Frame(self)
+        frame_busca.pack(anchor="w", padx=20, pady=20)
 
-        frame_direita = Frame(self)
-        frame_direita.pack(side="right", fill="both", expand=True, padx=20, pady=20)
-
-        scrollbar = Scrollbar(frame_direita, orient="vertical")
-        scrollbar.pack(side="right", fill="y")
-
-        Label(frame_esquerda, text="Nome:", width=12, anchor="e").pack(side="left")
-        self.Enome = Entry(frame_esquerda, width=40)
+        Label(frame_busca, text="Nome:", width=12, anchor="e").pack(side="left")
+        self.Enome = Entry(frame_busca, width=40)
         self.Enome.pack(side="left")
 
-        Button(frame_esquerda, text="Buscar", command=self.buscar).pack(pady=10)
+        Button(frame_busca, text="Buscar", command=self.buscar).pack(side="left", padx=10)
 
-        self.lista = Listbox(frame_direita, width=65, height=15)
-        self.lista.pack(side="right", fill="both", expand=True)
-
-        self.lista.config(yscrollcommand=scrollbar.set)
-        scrollbar.config(command=self.lista.yview)
+        self.tabela = TabelaOrdenavel(
+            self,
+            [
+                ("id", "ID", 60, lambda hospede: hospede.id),
+                ("nome", "Nome", 220, lambda hospede: hospede.nome),
+                ("cpf", "CPF", 130, lambda hospede: hospede.cpf),
+                ("email", "E-mail", 220, lambda hospede: hospede.email),
+                ("telefone", "Telefone", 120, lambda hospede: hospede.telefone),
+            ]
+        )
+        self.tabela.pack(fill="both", expand=True, padx=10, pady=10)
 
     def buscar(self):
-        self.lista.delete(0, END)
+        self.tabela.limpar()
         try:
-            hospedes = []
-            contador = 0
             hospedes = self.dao.carregarTodos()
             nome = self.Enome.get().lower()
+            encontrados = []
             for hospede in hospedes:
                 hospede_nome_lower = hospede.nome.lower()
-                if(hospede_nome_lower == nome):
-                    self.lista.insert(END, f"Hospede : {hospede.nome} | ID : {hospede.id}")
-                    contador+=1
+                if hospede_nome_lower == nome:
+                    encontrados.append(hospede)
                     continue
+
                 nomecompletohospede = hospede_nome_lower.split()
                 nomedabusca = nome.split()
-                for primeirosnomes in nomecompletohospede:
-                    oldcontador = contador
-                    for nomes in nomedabusca:
-                        if(nomes == primeirosnomes):
-                            self.lista.insert(END, f"Hospede : {hospede.nome} | ID : {hospede.id}")
-                            contador += 1
-                            break
-                    if(not (contador == oldcontador)):
-                        break
-            if(contador == 0):
+                if any(nome_busca == nome_hospede for nome_hospede in nomecompletohospede for nome_busca in nomedabusca):
+                    encontrados.append(hospede)
+
+            if len(encontrados) == 0:
                 raise ValueError
 
-        except PersistenceException as e:
-            self.lista.insert(END, str(e))
-            self.lista.itemconfig(END, fg="red")
+            self.tabela.carregar(encontrados)
 
-        except:
-            self.lista.insert(END, "Hóspede nao encontrado")
-            self.lista.itemconfig(END, fg="red")
+        except PersistenceException as e:
+            self.tabela.mostrar_erro(str(e))
+
+        except Exception:
+            self.tabela.mostrar_erro("Hospede nao encontrado")
+
+    def limpar_tela(self):
+        self.tabela.limpar()

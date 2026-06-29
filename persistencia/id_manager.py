@@ -13,32 +13,20 @@ class IDManager:
     @staticmethod
     def _ler_ids():
         IDManager.inicializar()
-
         with open(ARQ_IDS, "r", encoding="utf-8") as f:
             conteudo = f.read().strip()
 
-        if not conteudo:
-            partes = ["1", "1", "1", "1"]
-        else:
-            partes = conteudo.split(SEP)
+        partes = conteudo.split(SEP) if conteudo else ["1", "1", "1", "1"]
 
         while len(partes) < 4:
             partes.append("1")
 
-        return [
-            int(x)
-            for x in partes[:4]
-        ]
+        return [int(x) for x in partes[:4]]
 
     @staticmethod
     def _salvar_ids(ids):
         with open(ARQ_IDS, "w", encoding="utf-8") as f:
-            f.write(
-                SEP.join(
-                    str(i)
-                    for i in ids
-                )
-            )
+            f.write(SEP.join(str(i) for i in ids))
 
     @staticmethod
     def proximo_id_hospede():

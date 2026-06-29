@@ -3,6 +3,7 @@ from modelo.reserva import Reserva
 from persistencia.dao_factory import DAOFactory
 from persistencia.id_manager import IDManager
 from persistencia.persistence_exception import PersistenceException
+from visao.tabela_utils import TabelaOrdenavel
 from datetime import datetime
 
 class FrameReservas(Frame):
@@ -14,14 +15,16 @@ class FrameReservas(Frame):
         Button(self, text="Cancelar\nReserva", width=10, height=2, command=self.Chama_RRemove).pack(side="left")
         Button(self, text="Visualizar\npor ID", width=10, height=2, command=self.Chama_RVisual).pack(side="left")
         Button(self, text="Listar\nReservas", width=10, height=2, command=self.Chama_RList).pack(side="left")
+        Button(self, text="Adicionar\nProduto", width=10, height=2, command=self.Chama_RAddProduto).pack(side="left")
 
         self.cad = FrameRCad(container2)
         self.edit = FrameREdit(container2)
         self.remove = FrameRRemove(container2)
         self.visual = FrameRVisual(container2)
         self.lista = FrameRList(container2)
+        self.add_produto = FrameRAddProduto(container2)
 
-        self.frames = {self.cad, self.edit, self.remove, self.visual, self.lista}
+        self.frames = {self.cad, self.edit, self.remove, self.visual, self.lista, self.add_produto}
 
     def Chama_RCad(self):
         for i in self.frames:
@@ -54,7 +57,14 @@ class FrameReservas(Frame):
             i.pack_forget()
 
         self.lista.pack(fill="both", expand=True)
-        self.lista.lista.delete(0, END)
+        self.lista.limpar_tela()
+
+    def Chama_RAddProduto(self):
+        for i in self.frames:
+            i.pack_forget()
+
+        self.add_produto.msg.config(text="")
+        self.add_produto.pack(fill="both", expand=True)
 
 class FrameRCad(Frame):
     def __init__(self, container):
@@ -249,25 +259,102 @@ class FrameRVisual(Frame):
             except Exception as e:
                 self.resultado.config(text=str(e), fg="red")
 
+class FrameRAddProduto(Frame):
+    def __init__(self, container):
+        super().__init__(container)
+        self.produtoDAO = DAOFactory.getProdutoDAO()
+        self.reservaDAO = DAOFactory.getReservaDAO()
+
+        linha_reserva = Frame(self)
+        linha_reserva.pack(anchor="w", pady=5)
+
+        Label(linha_reserva, text="Reserva ID:", width=12, anchor="e").pack(side="left")
+        self.Ereserva = Entry(linha_reserva, width=10)
+        self.Ereserva.pack(side="left")
+
+        linha_produto = Frame(self)
+        linha_produto.pack(anchor="w", pady=5)
+
+        Label(linha_produto, text="Produto ID:", width=12, anchor="e").pack(side="left")
+        self.Eproduto = Entry(linha_produto, width=10)
+        self.Eproduto.pack(side="left")
+
+        linha_quantidade = Frame(self)
+        linha_quantidade.pack(anchor="w", pady=5)
+
+        Label(linha_quantidade, text="Quantidade:", width=12, anchor="e").pack(side="left")
+        self.Equantidade = Entry(linha_quantidade, width=10)
+        self.Equantidade.insert(0, "1")
+        self.Equantidade.pack(side="left")
+
+        Button(self, text="Adicionar Produto", command=self.adicionar).pack(pady=10)
+
+        self.msg = Label(self)
+        self.msg.pack()
+
+    def adicionar(self):
+        reserva_id = self.Ereserva.get()
+        produto_id = self.Eproduto.get()
+        quantidade = self.Equantidade.get()
+
+        if reserva_id == "" or produto_id == "" or quantidade == "":
+            self.msg.config(text="Erro: Informacoes insuficientes.", fg="red")
+            return
+
+        if not reserva_id.isdigit() or not produto_id.isdigit() or not quantidade.isdigit():
+            self.msg.config(text="Erro: IDs e quantidade devem ser numeros.", fg="red")
+            return
+
+        try:
+            reserva = self.reservaDAO.carregar(int(reserva_id))
+            produto = self.produtoDAO.carregar(int(produto_id))
+            reserva.adicionar_item(produto, int(quantidade))
+            self.reservaDAO.atualizar(reserva)
+
+            self.msg.config(text="Produto adicionado na reserva com sucesso.", fg="black")
+            self.after(3000, lambda: self.msg.config(text=""))
+            self.Ereserva.delete(0, END)
+            self.Eproduto.delete(0, END)
+            self.Equantidade.delete(0, END)
+            self.Equantidade.insert(0, "1")
+        except PersistenceException as e:
+            self.msg.config(text=str(e), fg="red")
+        except ValueError as e:
+            self.msg.config(text=str(e), fg="red")
+        except Exception as e:
+            self.msg.config(text=str(e), fg="red")
+
+
 class FrameRList(Frame):
     def __init__(self, container):
         super().__init__(container)
         self.reservaDAO = DAOFactory.getReservaDAO()
         Button(self, text="Listar Reservas", command=self.listar).pack(pady=10)
 
-        self.lista = Listbox(self, width=120, height=15)
-        self.lista.pack()
+        self.tabela = TabelaOrdenavel(
+            self,
+            [
+                ("id", "ID", 60, lambda reserva: reserva.id),
+                ("hospede", "Hospede", 170, lambda reserva: reserva.hospede.nome),
+                ("quarto", "Quarto", 90, lambda reserva: reserva.quarto.numero),
+                ("tipo", "Tipo", 110, lambda reserva: reserva.quarto.tipo),
+                ("checkin", "Check-in", 100, lambda reserva: reserva.checkin),
+                ("checkout", "Checkout", 100, lambda reserva: reserva.checkout),
+                ("noites", "Noites", 80, lambda reserva: reserva.numero_de_noites),
+                ("itens", "Itens", 80, lambda reserva: len(reserva.itens)),
+                ("total_itens", "Total itens", 100, lambda reserva: reserva.total_itens()),
+                ("total", "Total geral", 110, lambda reserva: reserva.total_geral()),
+            ]
+        )
+        self.tabela.pack(fill="both", expand=True, padx=10, pady=10)
 
     def listar(self):
-        self.lista.delete(0, END)
         try:
-            reservas = []
-            reservas = self.reservaDAO.carregarTodos()
-            for r in reservas:
-                self.lista.insert(END, f"id = {r.id} | hospede = {r.hospede.nome} | categoria = {r.quarto.tipo} check-in = {r.checkin} | checkout = {r.checkout}")
+            self.tabela.carregar(self.reservaDAO.carregarTodos())
         except PersistenceException as e:
-                self.lista.insert(END, str(e))
-                self.lista.itemconfig(0, fg="red")
+            self.tabela.mostrar_erro(str(e))
         except Exception as e:
-                self.lista.insert(END, str(e))
-                self.lista.itemconfig(0, fg="red")
+            self.tabela.mostrar_erro(str(e))
+
+    def limpar_tela(self):
+        self.tabela.limpar()
