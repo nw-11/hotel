@@ -75,7 +75,7 @@ class ProdutoDAO:
 
         for item in itens:
 
-            if int(item[1]) == id:
+            if int(item[0]) == id:
 
                 raise PersistenceException(
                     "apagar",

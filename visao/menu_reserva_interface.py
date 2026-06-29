@@ -1,4 +1,9 @@
 from tkinter import *
+from modelo.reserva import Reserva
+from persistencia.dao_factory import DAOFactory
+from persistencia.id_manager import IDManager
+from persistencia.persistence_exception import PersistenceException
+from datetime import datetime
 
 class FrameReservas(Frame):
     def __init__(self, container, container2):
@@ -27,13 +32,14 @@ class FrameReservas(Frame):
     def Chama_REdit(self):
         for i in self.frames:
             i.pack_forget()
-
+        
+        self.edit.msg.config(text="")
         self.edit.pack(fill="both", expand=True)
 
     def Chama_RRemove(self):
         for i in self.frames:
             i.pack_forget()
-
+        self.remove.msg.config(text="")
         self.remove.pack(fill="both", expand=True)
 
     def Chama_RVisual(self):
@@ -41,16 +47,22 @@ class FrameReservas(Frame):
             i.pack_forget()
 
         self.visual.pack(fill="both", expand=True)
+        self.visual.resultado.config(text="")
 
     def Chama_RList(self):
         for i in self.frames:
             i.pack_forget()
 
         self.lista.pack(fill="both", expand=True)
+        self.lista.lista.delete(0, END)
 
 class FrameRCad(Frame):
     def __init__(self, container):
         super().__init__(container)
+        self.hospedeDAO = DAOFactory.getHospedeDAO()
+        self.quartoDAO = DAOFactory.getQuartoDAO()
+        self.produtoDAO = DAOFactory.getProdutoDAO()
+        self.reservaDAO = DAOFactory.getReservaDAO()
 
         linha_hospede = Frame(self)
         linha_hospede.pack(anchor="w", pady=5)
@@ -93,19 +105,39 @@ class FrameRCad(Frame):
 
         if self.hospede == "" or self.quarto == "" or self.entrada == "" or self.saida == "":
             self.msg.config(text="Erro: Informações insuficientes.")
+        elif (not self.hospede.isdigit()) or (not self.quarto.isdigit()):
+            self.msg.config(text="Erro: ID invalido", fg="red")
         else:
-            self.msg.config(text="Reserva cadastrada com sucesso.")
-            self.after(3000, lambda: self.msg.config(text=""))
+            try:
+                h = self.hospedeDAO.carregar(int(self.hospede))
+                q = self.quartoDAO.carregar(int(self.quarto))
+                if(q.disponivel == False):
+                    self.msg.config(text="Quarto Indisponivel", fg="red")
+                    return
+                checkin = self.entrada
+                checkout = self.saida
+                reserva = Reserva(h, q, checkin, checkout)
+                reserva.id = IDManager.proximo_id_reserva()
+                self.reservaDAO.salvar(reserva)
 
-            self.Ehospede.delete(0, END)
-            self.Equarto.delete(0, END)
-            self.Eentrada.delete(0, END)
-            self.Esaida.delete(0, END)
+                self.msg.config(text="Reserva cadastrada com sucesso.", fg="black")
+                self.after(3000, lambda: self.msg.config(text=""))
+                self.Ehospede.delete(0, END)
+                self.Equarto.delete(0, END)
+                self.Eentrada.delete(0, END)
+                self.Esaida.delete(0, END)
+            except PersistenceException as e:
+                self.msg.config(text=str(e), fg="red")
+            except ValueError as e:
+                self.msg.config(text=str(e), fg="red")
 
 class FrameREdit(Frame):
     def __init__(self, container):
         super().__init__(container)
-
+        self.hospedeDAO = DAOFactory.getHospedeDAO()
+        self.quartoDAO = DAOFactory.getQuartoDAO()
+        self.produtoDAO = DAOFactory.getProdutoDAO()
+        self.reservaDAO = DAOFactory.getReservaDAO()
         linha_id = Frame(self)
         linha_id.pack(anchor="w", pady=5)
 
@@ -133,13 +165,33 @@ class FrameREdit(Frame):
         self.msg.pack()
 
     def save(self):
-        self.msg.config(text="Reserva atualizada com sucesso.")
-        self.after(3000, lambda: self.msg.config(text=""))
+        checkin = self.Eentrada.get()
+        checkout = self.Esaida.get()
+        if(not self.Eid.get().isdigit()):
+            self.msg.config(text="ID invalido", fg="red")
+            return
+        try:
+            id = int(self.Eid.get())
+            r = self.reservaDAO.carregar(id)
+            r.validar_datas(checkin, checkout)
+            r.checkin = checkin
+            r.checkout = checkout
+            self.reservaDAO.atualizar(r)
+            self.msg.config(text="Reserva atualizada com sucesso.", fg="black")
+            self.after(3000, lambda: self.msg.config(text=""))
 
+        except PersistenceException as e:
+            self.msg.config(text=str(e), fg="red")
+        except ValueError as e:
+            self.msg.config(text=str(e), fg="red")
+        except Exception as e:
+            self.msg.config(text=str(e), fg="red")
+
+        
 class FrameRRemove(Frame):
     def __init__(self, container):
         super().__init__(container)
-
+        self.reservaDAO = DAOFactory.getReservaDAO()
         linha_id = Frame(self)
         linha_id.pack(anchor="w", pady=5)
 
@@ -153,18 +205,23 @@ class FrameRRemove(Frame):
         self.msg.pack()
 
     def remove(self):
-        if self.Eid.get() == "":
-            self.msg.config(text="Informe um ID.")
+        if not self.Eid.get().isdigit():
+            self.msg.config(text="ID Invalido", fg="red")
         else:
-            self.msg.config(text="Reserva cancelada com sucesso.")
-            self.Eid.delete(0, END)
+            try:
+                id = int(self.Eid.get())
+                self.reservaDAO.apagar(id)
+                self.msg.config(text="Reserva cancelada com sucesso.")
+                self.Eid.delete(0, END)
+                self.after(3000, lambda: self.msg.config(text=""))
+            except PersistenceException as e:
+                self.msg.config(text=str(e), fg="red")
 
-        self.after(3000, lambda: self.msg.config(text=""))
 
 class FrameRVisual(Frame):
     def __init__(self, container):
         super().__init__(container)
-
+        self.reservaDAO = DAOFactory.getReservaDAO()
         linha_id = Frame(self)
         linha_id.pack(anchor="w", pady=5)
 
@@ -178,16 +235,39 @@ class FrameRVisual(Frame):
         self.resultado.pack(anchor="w")
 
     def visualizar(self):
-        pass
+        id = self.Eid.get()
+        if(not id.isdigit()):
+            self.resultado.config(text="ID invalido", fg="red")
+            return
+        else:
+            try:
+                reserva = self.reservaDAO.carregar(int(id))
+                self.resultado.config(text=str(reserva), fg="black")
+                self.Eid.delete(0, END)
+            except PersistenceException as e:
+                self.resultado.config(text=str(e), fg="red")
+            except Exception as e:
+                self.resultado.config(text=str(e), fg="red")
 
 class FrameRList(Frame):
     def __init__(self, container):
         super().__init__(container)
-
+        self.reservaDAO = DAOFactory.getReservaDAO()
         Button(self, text="Listar Reservas", command=self.listar).pack(pady=10)
 
-        self.lista = Listbox(self, width=60, height=15)
+        self.lista = Listbox(self, width=120, height=15)
         self.lista.pack()
 
     def listar(self):
         self.lista.delete(0, END)
+        try:
+            reservas = []
+            reservas = self.reservaDAO.carregarTodos()
+            for r in reservas:
+                self.lista.insert(END, f"id = {r.id} | hospede = {r.hospede.nome} | categoria = {r.quarto.tipo} check-in = {r.checkin} | checkout = {r.checkout}")
+        except PersistenceException as e:
+                self.lista.insert(END, str(e))
+                self.lista.itemconfig(0, fg="red")
+        except Exception as e:
+                self.lista.insert(END, str(e))
+                self.lista.itemconfig(0, fg="red")

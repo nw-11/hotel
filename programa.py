@@ -1,4 +1,4 @@
-from visao.menu_principal import Menu_Principal
+from visao.menu_principal_interface import *
 from persistencia.id_manager import IDManager
 
 
@@ -7,9 +7,8 @@ def main():
     # garante criação/controle do arquivo de ids
     IDManager.inicializar()
 
-    app = Menu_Principal()
-
-    app.menu()
+    bob = Janela()
+    bob.janela.mainloop()
 
 
 if __name__ == "__main__":

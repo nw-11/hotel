@@ -4,10 +4,11 @@
 #from visao.menu_produto import Menu_Produto
 #from visao.menu_principal import Menu_Principal
 from tkinter import *
-from menu_hospede_interface import *
-from menu_quarto_interface import *
-from menu_produto_interface import *
-from menu_reserva_interface import *
+import os
+from visao.menu_hospede_interface import *
+from visao.menu_quarto_interface import *
+from visao.menu_produto_interface import *
+from visao.menu_reserva_interface import *
 
 class Janela:
     def __init__(self):
@@ -138,10 +139,9 @@ class FrameStandby(Frame):
     def __init__(self, container, container2):
         super().__init__(container, width=400, height=600, bg="green")
 
-        self.img = PhotoImage(file="Ventana.png")
+        diretorio_atual = os.path.dirname(__file__)
+        caminho_imagem = os.path.join(diretorio_atual, "Ventana.png")
+        self.img = PhotoImage(file=caminho_imagem)
         Label(self, image=self.img).pack()
 
 
-#DEBUGGING INTERFACE
-bob = Janela()
-bob.janela.mainloop()

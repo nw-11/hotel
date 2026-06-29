@@ -1,4 +1,9 @@
 from tkinter import *
+from modelo.quarto import Quarto
+from persistencia.dao_factory import DAOFactory
+from persistencia.id_manager import IDManager
+from persistencia.persistence_exception import PersistenceException
+
 
 #Frames Quartos---------------------------------------------------------------                
 
@@ -28,12 +33,13 @@ class FrameQuartos(Frame):
         for i in self.frames:
             i.pack_forget()
 
+        self.cad.msg.config(text="")
         self.cad.pack(fill="both", expand=True)
 
     def Chama_QEdit(self):
         for i in self.frames:
             i.pack_forget()
-
+        self.edit.msg.config(text="")
         self.edit.pack(fill="both", expand=True)
 
     def Chama_QRemove(self):
@@ -53,17 +59,20 @@ class FrameQuartos(Frame):
             i.pack_forget()
 
         self.list.pack(fill="both", expand=True)
+        self.list.lista.delete(0, END)
 
     def Chama_QDisponiveis(self):
         for i in self.frames:
             i.pack_forget()
 
         self.disponiveis.pack(fill="both", expand=True)
+        self.disponiveis.lista.delete(0, END)
 
 class FrameQCad(Frame):
     def __init__(self, container):
         super().__init__(container)
-
+        self.dao = DAOFactory.getQuartoDAO()
+        
         linha_num = Frame(self)
         linha_num.pack(anchor="w", pady=5)
 
@@ -76,8 +85,8 @@ class FrameQCad(Frame):
         linha_tipo.pack(anchor="w", pady=5)
 
         Label(linha_tipo, text="Tipo:", width=12, anchor="e").pack(side="left")
-        self.tipo = StringVar(value="Standard")
-        OptionMenu(linha_tipo, self.tipo, "Standard", "Luxo", "Master").pack(side="left")
+        self.tipo = StringVar(value="Standart")
+        OptionMenu(linha_tipo, self.tipo, "Standart", "Luxo", "Master").pack(side="left")
 
         linha_valor = Frame(self)
         linha_valor.pack(anchor="w", pady=5)
@@ -92,24 +101,42 @@ class FrameQCad(Frame):
         self.msg.pack()
 
     def save(self):
-        self.numero = self.Enum.get()
-        self.tipo = self.tipo.get()
-        self.valor = self.Evalor.get()
+        num = self.Enum.get()
+        tipo = self.tipo.get()
+        val = self.Evalor.get().strip()
 
-        if self.numero == "" or self.tipo == "" or self.valor == "":
-            self.msg.config(text="Erro: Informações insuficientes.")
+        if num == "" or val == "":
+            self.msg.config(text="Erro: Informações insuficientes.",fg="red")
+        elif not num.isdigit():
+            self.msg.config(text="Erro: Numero invalido", fg="red")
+
         else:
-            self.msg.config(text="Quarto cadastrado com sucesso.")
-            self.after(3000, lambda: self.msg.config(text=""))
+            try:
+                val = float(val)
+                if(val <= 0):
+                    raise ValueError
+                quarto = Quarto(num, tipo, val, True)
+                quarto.id = IDManager.proximo_id_quarto()
+                self.dao.salvar(quarto)
 
-            self.Enum.delete(0, END)
-            self.Etipo.delete(0, END)
-            self.Evalor.delete(0, END)
+                self.msg.config(text="Quarto cadastrado com sucesso.")
+                self.after(3000, lambda: self.msg.config(text=""))
+
+                self.Enum.delete(0, END)
+                self.Evalor.delete(0, END)
+            except PersistenceException as e:
+                self.msg.config(text=str(e), fg="red")
+            except ValueError:
+                self.msg.config(text="Valor Inválido", fg="red")
+                self.Enum.delete(0, END)
+                self.Evalor.delete(0, END)
+            except Exception as e:
+                self.msg.config(text=str(e), fg="red")
 
 class FrameQEdit(Frame):
     def __init__(self, container):
         super().__init__(container)
-
+        self.dao = DAOFactory.getQuartoDAO()
         linha_id = Frame(self)
         linha_id.pack(anchor="w", pady=5)
 
@@ -122,8 +149,8 @@ class FrameQEdit(Frame):
         linha_tipo.pack(anchor="w", pady=5)
 
         Label(linha_tipo, text="Tipo:", width=12, anchor="e").pack(side="left")
-        self.tipo = StringVar(value="Standard")
-        OptionMenu(linha_tipo, self.tipo, "Standard", "Luxo", "Master").pack(side="left")
+        self.tipo = StringVar(value="Standart")
+        OptionMenu(linha_tipo, self.tipo, "Standart", "Luxo", "Master").pack(side="left")
 
         linha_valor = Frame(self)
         linha_valor.pack(anchor="w", pady=5)
@@ -138,13 +165,39 @@ class FrameQEdit(Frame):
         self.msg.pack()
 
     def save(self):
-        self.msg.config(text="Quarto atualizado com sucesso.")
-        self.after(3000, lambda: self.msg.config(text=""))
+        id = self.Eid.get()
+        tipo = self.tipo.get()
+        val = self.Evalor.get().strip()
+        if(not id.isdigit()):
+            self.msg.config(text="ID invalido", fg="red")
+        else:
+            try:
+                val = float(val)
+                if(val <= 0):
+                    raise ValueError
+                q = self.dao.carregar(int(id))
+                q.tipo = tipo
+                q.diaria = val
+
+                self.dao.atualizar(q)
+                self.msg.config(text="Quarto atualizado com sucesso.",fg="black")
+                self.after(3000, lambda: self.msg.config(text=""))
+                self.Eid.delete(0, END)
+                self.Evalor.delete(0, END)
+            except PersistenceException as e:
+                self.msg.config(text=str(e), fg="red")
+                self.Eid.delete(0, END)
+                self.Evalor.delete(0, END)
+            except ValueError:
+                self.msg.config(text="Preco invalido", fg="red")
+                self.Eid.delete(0, END)
+                self.Evalor.delete(0, END)
+                
 
 class FrameQRemove(Frame):
     def __init__(self, container):
         super().__init__(container)
-
+        self.dao = DAOFactory.getQuartoDAO()
         linha_id = Frame(self)
         linha_id.pack(anchor="w", pady=5)
 
@@ -159,17 +212,25 @@ class FrameQRemove(Frame):
 
     def remove(self):
         if self.Eid.get() == "":
-            self.msg.config(text="Informe um ID.")
+            self.msg.config(text="Informe um ID.",fg="black")
+        elif not self.Eid.get().isdigit():
+            self.msg.config(text="ID invalido",fg="red")
         else:
-            self.msg.config(text="Quarto removido com sucesso.")
-            self.Eid.delete(0, END)
-
-        self.after(3000, lambda: self.msg.config(text=""))
+            try:
+                id = self.Eid.get()
+                self.dao.apagar(int(id))
+                self.msg.config(text="Quarto removido com sucesso.",fg="black")
+                self.Eid.delete(0, END)
+                self.after(3000, lambda: self.msg.config(text=""))
+            except PersistenceException as e:
+                self.msg.config(text=str(e),fg="red")
+            except Exception as e:
+                self.msg.config(text=str(e),fg="red")
 
 class FrameQVisual(Frame):
     def __init__(self, container):
         super().__init__(container)
-
+        self.dao = DAOFactory.getQuartoDAO()
         linha_id = Frame(self)
         linha_id.pack(anchor="w", pady=5)
 
@@ -183,28 +244,64 @@ class FrameQVisual(Frame):
         self.resultado.pack(anchor="w")
 
     def visualizar(self):
-        pass
+        id = self.Eid.get()
+        if(not id.isdigit()):
+            self.resultado.config(text="ID invalido",fg="red")
+        else:
+            try:
+                id = int(id)
+                q = self.dao.carregar(id)
+                self.resultado.config(text=str(q),fg="black")
+                self.Eid.delete(0, END)
+            except PersistenceException as e:
+                self.resultado.config(text=str(e),fg="red")
+                self.Eid.delete(0, END)
 
 class FrameQList(Frame):
     def __init__(self, container):
         super().__init__(container)
-
+        self.dao = DAOFactory.getQuartoDAO()
         Button(self, text="Listar Quartos", command=self.listar).pack(pady=10)
 
-        self.lista = Listbox(self, width=60, height=15)
+        self.lista = Listbox(self, width=90, height=15)
         self.lista.pack()
 
     def listar(self):
         self.lista.delete(0, END)
+        try:
+            quartos = []
+            quartos = self.dao.carregarTodos()
+            for quarto in quartos:
+                if quarto.disponivel:
+                    self.lista.insert(END, f"id = {quarto.id} | n° = {quarto.numero} | categoria = {quarto.tipo} | disponibilidade = true")
+                else:
+                    self.lista.insert(END, f"id = {quarto.id} | n° = {quarto.numero} | categoria = {quarto.tipo} | disponibilidade = false")
+        except PersistenceException as e:
+            self.lista.delete(0, END)
+            self.lista.insert(END, str(e))
+            self.lista.itemconfig(END, fg="red")
 
 class FrameQDisponiveis(Frame):
     def __init__(self, container):
         super().__init__(container)
-
+        self.dao = DAOFactory.getQuartoDAO()
         Button(self, text="Listar Disponíveis", command=self.listar).pack(pady=10)
 
-        self.lista = Listbox(self, width=60, height=15)
+        self.lista = Listbox(self, width=90, height=15)
         self.lista.pack()
 
     def listar(self):
         self.lista.delete(0, END)
+        try:
+            quartos = []
+            quartos = self.dao.carregarDisponiveis()
+            if len(quartos) == 0:
+                self.lista.insert(END, "Nenhum quarto disponivel")
+                self.lista.itemconfig(END, fg="red")
+                return
+            for quarto in quartos:
+                    self.lista.insert(END, f"id = {quarto.id} | n° = {quarto.numero} | categoria = {quarto.tipo}")
+        except PersistenceException as e:
+            self.lista.delete(0, END)
+            self.lista.insert(END, str(e))
+            self.lista.itemconfig(END, fg="red")

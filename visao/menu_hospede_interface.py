@@ -1,4 +1,9 @@
 from tkinter import *
+from modelo.hospede import Hospede
+from persistencia.dao_factory import DAOFactory
+from persistencia.id_manager import IDManager
+from persistencia.persistence_exception import PersistenceException
+
 
 #Frames referentes à Hospedagem------------------------------------------------
 class FrameHospedes(Frame):
@@ -46,23 +51,28 @@ class FrameHospedes(Frame):
         for i in self.frames:
             i.pack_forget()
 
+        self.visual.msg.config(text="")
+        self.visual.Eid.delete(0, END)
         self.visual.pack(fill="both", expand=True)    
 
     def Chama_HList(self):
         for i in self.frames:
             i.pack_forget()
-
+        self.list.lista.delete(0, END)
         self.list.pack(fill="both", expand=True)   
 
     def Chama_HSearch(self):
         for i in self.frames:
             i.pack_forget()
-
+        
+        self.search.Enome.delete(0, END)
+        self.search.lista.delete(0, END)
         self.search.pack(fill="both", expand=True)    
                 
 class FrameCad(Frame):
     def __init__(self, container2):
         super().__init__(container2)
+        self.dao = DAOFactory.getHospedeDAO()
 
         #Padrão: Enome, Ecpf, Eemail, Etel = variáveis de Entry
         #        linha_nome, linha_cpf, linha_email, linha_tel = variáveis que armazenam o dado de Entry
@@ -105,6 +115,7 @@ class FrameCad(Frame):
         self.msg_exists = False
 
     def save(self):
+
         #recebendo informações do Entry
         self.nome = self.Enome.get()
         self.cpf = self.Ecpf.get()
@@ -112,29 +123,53 @@ class FrameCad(Frame):
         self.tel = self.Etel.get()
 
         if (self.nome == "" or self.cpf == "" or self.email == "" or self.tel == ""):
+            self.msg["text"] = "Erro: Informações insuficientes."
             if (self.msg_exists == False):
-                self.msg["text"] = "Erro: Informações insuficientes."
+                self.msg.pack()
+                self.msg_exists = True
+                
+        elif((not self.cpf.isdigit()) or len(self.cpf) != 11):
+            self.msg["text"] = "Erro: CPF Inválido"
+            if (self.msg_exists == False):
                 self.msg.pack()
                 self.msg_exists = True
 
+        elif(not self.tel.isdigit() or (len(self.tel) < 10 or len(self.tel) > 11)):
+            self.msg["text"] = "Erro: Telefone inválido"
+            if (self.msg_exists == False):
+                self.msg.pack()
+                self.msg_exists = True
+
+        elif "@" not in self.email or "." not in self.email.split("@")[-1]:
+            self.msg["text"] = "Erro: E-mail inválido"
+            if (self.msg_exists == False):
+                self.msg.pack()
+                self.msg_exists = True
 
         else:
-            self.msg.pack_forget()
-            self.msg = Label(self, text="Hóspede cadastrado com sucesso.")
-            self.msg.pack()
-            self.after(3000, lambda: self.msg.config(text=""))
-            self.msg_exists=False
-            
-            self.Enome.delete(0, END)
-            self.Ecpf.delete(0, END)
-            self.Eemail.delete(0, END)
-            self.Etel.delete(0, END)
-        #deve-se colocar Hospede(self.nome, self.cpf, self.email, self.tel) no banco de dados
+            try:
+                h = Hospede(self.nome, self.cpf, self.email, self.tel)
+                h.id = IDManager.proximo_id_hospede()
+                self.dao.salvar(h)
+                self.msg.pack_forget()
+                self.msg = Label(self, text="Hóspede cadastrado com sucesso.")
+                self.msg.pack()
+                self.after(3000, lambda: self.msg.config(text=""))
+                self.msg_exists=False
+                self.Enome.delete(0, END)
+                self.Ecpf.delete(0, END)
+                self.Eemail.delete(0, END)
+                self.Etel.delete(0, END)
+
+            except Exception as e:
+                self.msg["text"] = str(e)
+                self.msg.pack()
+                self.msg_exists = True
 
 class FrameHEdit(Frame):
     def __init__(self, container):
         super().__init__(container)
-
+        self.dao = DAOFactory.getHospedeDAO()
         
         linha_id = Frame(self)
         linha_id.pack(anchor="w", pady=5)
@@ -191,23 +226,55 @@ class FrameHEdit(Frame):
                 self.msg["text"] = "Erro: Informações insuficientes."
                 self.msg.pack()
                 self.msg_exists = True
+        elif((not self.cpf.isdigit()) or len(self.cpf) != 11):
+            self.msg["text"] = "Erro: CPF Inválido"
+            if (self.msg_exists == False):
+                self.msg.pack()
+                self.msg_exists = True
+
+        elif(not self.tel.isdigit() or (len(self.tel) < 10 or len(self.tel) > 11)):
+            self.msg["text"] = "Erro: Telefone inválido"
+            if (self.msg_exists == False):
+                self.msg.pack()
+                self.msg_exists = True
+
+        elif "@" not in self.email or "." not in self.email.split("@")[-1]:
+            self.msg["text"] = "Erro: E-mail inválido"
+            if (self.msg_exists == False):
+                self.msg.pack()
+                self.msg_exists = True
         else:
-            self.msg.pack_forget()
-            self.msg.config(text="Hóspede atualizado com sucesso.")
-            self.msg.pack()
-            self.after(3000, lambda: self.msg.config(text=""))
-            self.msg_exists=False
+            try:
+                h = self.dao.carregar(int(self.id))
+                h.nome = self.nome
+                h.cpf = self.cpf
+                h.email = self.email
+                h.telefone = self.tel
+                
+                self.dao.atualizar(h)
 
+                self.msg.pack_forget()
+                self.msg.config(text="Hóspede atualizado com sucesso.")
+                self.msg.pack()
+                self.after(3000, lambda: self.msg.config(text=""))
+                self.msg_exists=False
 
-            self.Eid.delete(0,END)
-            self.Enome.delete(0, END)
-            self.Ecpf.delete(0, END)
-            self.Eemail.delete(0, END)
-            self.Etel.delete(0, END)
+                self.Eid.delete(0,END)
+                self.Enome.delete(0, END)
+                self.Ecpf.delete(0, END)
+                self.Eemail.delete(0, END)
+                self.Etel.delete(0, END)
+            except PersistenceException as e:
+
+                self.msg["text"] = str(e)
+                self.msg.pack()
+                self.msg_exists = True
+
 
 class FrameHRemove(Frame):
     def __init__(self, container):
         super().__init__(container)
+        self.dao = DAOFactory.getHospedeDAO()
 
         linha_id = Frame(self)
         linha_id.pack(anchor="w", pady=5)
@@ -222,17 +289,27 @@ class FrameHRemove(Frame):
         self.msg.pack()
 
     def remove(self):
-        if self.Eid.get() == "":
+        self.id = self.Eid.get()
+        if self.id == "":
+            self.msg.config(text="Informe um ID.")
+        elif not self.id.isdigit():
             self.msg.config(text="Informe um ID.")
         else:
-            self.msg.config(text="Hóspede removido com sucesso.")
-            self.Eid.delete(0, END)
-
-        self.after(3000, lambda: self.msg.config(text=""))
+            try:
+                self.dao.apagar(int(self.id))
+                self.msg.config(text="Hóspede removido com sucesso.")
+                self.Eid.delete(0, END)
+                self.after(3000, lambda: self.msg.config(text=""))
+            except PersistenceException as e:
+                self.msg["text"] = str(e)
+                self.msg.pack()
+                self.msg_exists = True
+                
 
 class FrameHVisual(Frame):
     def __init__(self, container):
         super().__init__(container)
+        self.dao = DAOFactory.getHospedeDAO()
 
         linha_id = Frame(self)
         linha_id.pack(anchor="w", pady=5)
@@ -243,42 +320,116 @@ class FrameHVisual(Frame):
 
         Button(self, text="Visualizar", command=self.visualizar).pack(pady=10)
 
-        self.resultado = Label(self, justify="left")
-        self.resultado.pack(anchor="w", padx=20)
+        self.msg = Label(self)
+        self.msg.pack()
 
     def visualizar(self):
-        #colocar método para visualizar hóspede por id
-        pass            
+        self.id = self.Eid.get()
+        if self.id == "":
+            self.msg.config(text="Informe um ID.", fg="red")
+        elif not self.id.isdigit():
+            self.msg.config(text="Informe um ID.", fg="red")
+        else:
+            try:
+                h = self.dao.carregar(int(self.id))
+                self.msg.config(text=f"Hóspede: {h.nome} | Email: {h.email} | CPF : {h.cpf} | Telefone {h.telefone}", fg="black")
+            except PersistenceException as e:
+                self.msg["text"] = str(e)
+                self.msg["fg"] = "red"
+                self.msg.pack()
+                self.msg_exists = True
+              
 
 class FrameHList(Frame):
     def __init__(self, container):
         super().__init__(container)
-
+        self.dao = DAOFactory.getHospedeDAO()
         Button(self, text="Listar Hóspedes", command=self.listar).pack(pady=10)
 
-        self.lista = Listbox(self, width=60, height=15)
-        self.lista.pack()
+        frame_lista = Frame(self)
+        frame_lista.pack(pady=10)
 
+        scrollbar = Scrollbar(frame_lista, orient="vertical")
+        scrollbar.pack(side="right", fill="y")
+
+        self.lista = Listbox(frame_lista, width=110, height=15)
+        self.lista.pack(side="left", fill="both", expand=True)
+
+        self.lista.config(yscrollcommand=scrollbar.set)
+        scrollbar.config(command=self.lista.yview)
+        
     def listar(self):
-        pass
-        #colocar método para listar todos os hóspedes disponíveis no banco de dados
+        hospedes = []
+        try:
+            hospedes = self.dao.carregarTodos()
+        except PersistenceException as e:
+            self.lista.insert(END, str(e))
+            return
+        
+        self.lista.delete(0, END)
+        for hospede in hospedes:
+            self.lista.insert(END, f"ID: {hospede.id} | Nome: {hospede.nome} | CPF: {hospede.cpf} | E-mail: {hospede.email} | Tel: {hospede.telefone}")
+    
+    def limpar_tela(self):
+        self.lista.delete(0, END)
 
 class FrameHSearch(Frame):
     def __init__(self, container):
         super().__init__(container)
+        self.dao = DAOFactory.getHospedeDAO()
 
-        linha_nome = Frame(self)
-        linha_nome.pack(anchor="w", pady=5)
+        frame_esquerda = Frame(self)
+        frame_esquerda.pack(side="left", anchor="n", padx=20, pady=20)
 
-        Label(linha_nome, text="Nome:", width=12, anchor="e").pack(side="left")
-        self.Enome = Entry(linha_nome, width=40)
+        frame_direita = Frame(self)
+        frame_direita.pack(side="right", fill="both", expand=True, padx=20, pady=20)
+
+        scrollbar = Scrollbar(frame_direita, orient="vertical")
+        scrollbar.pack(side="right", fill="y")
+
+        Label(frame_esquerda, text="Nome:", width=12, anchor="e").pack(side="left")
+        self.Enome = Entry(frame_esquerda, width=40)
         self.Enome.pack(side="left")
 
-        Button(self, text="Buscar", command=self.buscar).pack(pady=10)
+        Button(frame_esquerda, text="Buscar", command=self.buscar).pack(pady=10)
 
-        self.lista = Listbox(self, width=60, height=10)
-        self.lista.pack()
+        self.lista = Listbox(frame_direita, width=65, height=15)
+        self.lista.pack(side="right", fill="both", expand=True)
+
+        self.lista.config(yscrollcommand=scrollbar.set)
+        scrollbar.config(command=self.lista.yview)
 
     def buscar(self):
-        #colocar método para buscar por nome
-        pass
+        self.lista.delete(0, END)
+        try:
+            hospedes = []
+            contador = 0
+            hospedes = self.dao.carregarTodos()
+            nome = self.Enome.get().lower()
+            for hospede in hospedes:
+                hospede_nome_lower = hospede.nome.lower()
+                if(hospede_nome_lower == nome):
+                    self.lista.insert(END, f"Hospede : {hospede.nome} | ID : {hospede.id}")
+                    contador+=1
+                    continue
+                nomecompletohospede = hospede_nome_lower.split()
+                nomedabusca = nome.split()
+                for primeirosnomes in nomecompletohospede:
+                    oldcontador = contador
+                    for nomes in nomedabusca:
+                        if(nomes == primeirosnomes):
+                            self.lista.insert(END, f"Hospede : {hospede.nome} | ID : {hospede.id}")
+                            contador += 1
+                            break
+                    if(not (contador == oldcontador)):
+                        break
+            if(contador == 0):
+                raise ValueError
+
+        except PersistenceException as e:
+            self.lista.insert(END, str(e))
+            self.lista.itemconfig(END, fg="red")
+
+        except:
+            self.lista.insert(END, "Hóspede nao encontrado")
+            self.lista.itemconfig(END, fg="red")
